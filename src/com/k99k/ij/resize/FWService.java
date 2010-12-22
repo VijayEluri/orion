@@ -3,31 +3,22 @@
  */
 package com.k99k.ij.resize;
 
-import it.sauronsoftware.ftp4j.FTPAbortedException;
 import it.sauronsoftware.ftp4j.FTPClient;
-import it.sauronsoftware.ftp4j.FTPDataTransferException;
-import it.sauronsoftware.ftp4j.FTPDataTransferListener;
-import it.sauronsoftware.ftp4j.FTPException;
-import it.sauronsoftware.ftp4j.FTPFile;
-import it.sauronsoftware.ftp4j.FTPIllegalReplyException;
-import it.sauronsoftware.ftp4j.FTPListParseException;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.UnknownHostException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Properties;
 import org.apache.log4j.Logger;
 import org.bson.types.ObjectId;
 import org.stringtree.json.JSONReader;
@@ -71,7 +62,8 @@ public class FWService implements Runnable {
 	private String readyPath = "d:/fwservice/readyPath";
 	private String srcPath = "d:/fwservice/srcPath";
 	private String outPath = "d:/fwservice/outPath";
-	private String tmpPath = "d:/fwservice/tmpPath";
+	private String datePath = "d:/fwservice/datePath";
+	private String tmpPath = "d:/fwservice/datePath";
 	private String config = "fws.json";
 	private String webPath = "/orion";
 	private int sleep = 5000;
@@ -213,6 +205,7 @@ public class FWService implements Runnable {
 			this.readyPath = json.get("readyPath").toString();
 			this.outPath = json.get("outPath").toString();
 			this.srcPath = json.get("srcPath").toString();
+			this.datePath = json.get("datePath").toString();
 			this.webPath = json.get("webPath").toString();
 			this.mongoIP = json.get("mongoIP").toString();
 			this.mongoPort = Integer.parseInt(json.get("mongoPort").toString());
@@ -490,6 +483,8 @@ public class FWService implements Runnable {
 				log.info("=========================\n");
 				break;
 			case TASK_BUILD:
+				//以日期时间为临时目录
+				tmpPath = this.datePath+"/"+new SimpleDateFormat("yyyy_MM_dd-HH_mm_ss").format(new Date());
 				//发布图片
 				ArrayList<String> picList = ij.buildNewPics(readyPath, tmpPath, getInitIDMap(),srcPath);
 				//更新数据库
@@ -497,9 +492,7 @@ public class FWService implements Runnable {
 				//同步ftp
 				this.synFtps();
 				//处理临时文件
-				File tmpF = new File(tmpPath);
-				copyFullDir(tmpF,new  File(outPath));
-				deleteDir(tmpF);
+				copyFullDir(new File(tmpPath),new  File(outPath));
 				log.info("=========================\n");
 				break;
 			default:
@@ -540,15 +533,16 @@ public class FWService implements Runnable {
 
 	
 	/**
+	 * 服务入口 
 	 * @param args
 	 */
 	public static void main(String[] args) {
-//		FWService fws = new FWService();
-//		Thread t = new Thread(fws,"fws");
-//		t.start();
-//		fws.testBuild();
+		FWService fws = new FWService();
+		Thread t = new Thread(fws,"fws");
+		t.start();
 		
-//		FWService.copyFullDir(new File("f:/testPicsSrc"),new  File("f:/testPicsOut"));
+		//测试 
+		//fws.testBuild();
 		
 		
 	}

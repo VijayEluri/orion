@@ -3,6 +3,7 @@
 "readyPath":"F:/testPics",
 "outPath":"F:/testPicsOut",
 "srcPath":"F:/testPicsSrc",
+"datePath":"F:/datePics",
 "webPath":"/orion",
 "sleep":"1000",
 "preWidth":"300",
@@ -10,7 +11,7 @@
 "mongoIP":"127.0.0.1",
 "mongoPort":"27017",
 "synftp":[
-	{"ip":"202.102.40.43","port":"21","dir":"/webapps/ROOT/orion/",
+	{"ip":"202.102.40.43","port":"21","dir":"/testUpload",
 	"user":"keel","pwd":"6667441"}
 ]
 }

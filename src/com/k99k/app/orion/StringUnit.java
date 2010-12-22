@@ -6,14 +6,23 @@ import java.util.Date;
 
 public class StringUnit {
 	
-	private static final DateFormat NORMAL_TIME_FORMATE = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+	private static final DateFormat NORMAL_TIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	private static final DateFormat NORMAL_DATE_FORMAT = new SimpleDateFormat("yyyyMMdd");
 	
 	/**
 	 * 获取当前时间,格式为yyyy-MM-dd hh:mm:ss
 	 * @return
 	 */
 	public static final String getNowTime(){
-		return NORMAL_TIME_FORMATE.format(new Date());
+		return NORMAL_TIME_FORMAT.format(new Date());
+	}
+	
+	/**
+	 * 获取当前日期,格式为yyyyMMdd
+	 * @return
+	 */
+	public static final String getNowDate(){
+		return NORMAL_DATE_FORMAT.format(new Date());
 	}
 	
 	/**
