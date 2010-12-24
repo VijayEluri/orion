@@ -408,9 +408,9 @@ public class IJBuilderForFW  {
 	 * 注意图片按文件名#号后的字母顺序生成,文件名加入[skip]可跳过处理
 	 * @param inPath 
 	 * @param outPath 
-	 * @param donePath 处理完后将源图移动到的另一路径,为空时不移动
 	 * @param iniIdMap 初始id值:&lt;cate,maxId&gt;
-	 * @param ArrayList 每项格式为catePre#picId
+	 * @param donePath 处理完后将源图移动到的另一路径,为空时不移动
+	 * @return ArrayList 每项格式为catePre#picId
 	 */
 	public final ArrayList<String> buildNewPics(String inPath,String outPath,HashMap<String,Integer> iniIdMap,String donePath){
 		ArrayList<String> picList = new ArrayList<String>();
@@ -421,7 +421,10 @@ public class IJBuilderForFW  {
 	    	(new File(donePath)).mkdirs();
 	    	moveToDonePath = true;//(new File(donePath)).mkdirs();
 	    }
-
+	    if (outPath != null && outPath.length()>2) {
+	    	(new File(outPath)).mkdirs();
+	    }
+	    
 		File srcdir = new File(inPath);
 		File[] dirs = srcdir.listFiles(dirFilter);
 	    if (dirs == null) {

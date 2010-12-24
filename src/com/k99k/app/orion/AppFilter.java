@@ -86,9 +86,10 @@ public class AppFilter implements Filter {
 		String url = req.getRequestURI();
 //		System.out.println(url);
 		//-----------------------------------
-		//处理登录
-		if (url.indexOf("fw_ini")>0) {
-			if (req.getParameter("wall")!= null) {
+		//新的请求处理
+		if (req.getParameter("wall")!= null) {
+			//处理登录
+			if (url.indexOf("fw_ini")>0) {
 				try {
 					String deStr = desEncrypt.decrypt((String)req.getParameter("wall"));
 					HashMap<String,String> loginTask = (HashMap<String, String>) jsonReader.read(deStr);
@@ -97,10 +98,13 @@ public class AppFilter implements Filter {
 					e.printStackTrace();
 					chain.doFilter(request, response);
 				}
+				chain.doFilter(request, response);
+				return;
 			}
-			chain.doFilter(request, response);
-			return;
+			//
+			
 		}
+		
 		//处理登录(老)
 		if (url.indexOf("fw_index")>0) {
 			if (req.getHeader("imei")!= null) {
@@ -252,6 +256,13 @@ public class AppFilter implements Filter {
 			response.getWriter().print(re);
 			return;
 		}		
+		//-----------------------------------
+		//updatenewpicsnow
+		if (url.indexOf("updatenewpicsnow") > -1) {
+			boolean re = fwall.updateNewPicsNow();
+			response.getWriter().print(re);
+			return;
+		}
 		//-----------------------------------
 		//getMongoConState
 		if (url.indexOf("getmongostate") > -1) {

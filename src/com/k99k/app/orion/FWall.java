@@ -18,6 +18,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
+import com.mongodb.MongoException;
 import com.mongodb.WriteResult;
 
 /**
@@ -993,6 +994,29 @@ public class FWall implements Runnable {
 		this.isRun = isRun;
 	}
 
+	/**
+	 * 立即处理每日更新索引,通过调整nextUpdateTime到1小时前实现
+	 */
+	public boolean updateNewPicsNow(){
+		try {
+			Calendar c = Calendar.getInstance();
+			c.add(Calendar.HOUR_OF_DAY, -1);
+			DBCollection coll = mongoCol.getColl("wallDay");
+			DBCursor cur = coll.find();
+			if (cur.hasNext()) {
+				DBObject o = cur.next();
+				o.put("nextUpdateTime", c.getTime());
+				o.put("lastUpdate",new Date());
+				coll.update(new BasicDBObject("id",1), o);
+			}
+			
+			this.nextUpdateTime = c.getTime(); 
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+		return true;
+	}
 
 	/**
 	 * @param args
@@ -1052,7 +1076,7 @@ public class FWall implements Runnable {
 //			Calendar c = Calendar.getInstance();
 //			c.set(Calendar.HOUR_OF_DAY, 12);
 //			c.set(Calendar.MINUTE, 00);
-//			c.add(Calendar.DATE, 1);
+//			//c.add(Calendar.DATE, 1);
 //			//o.put("nextUpdateTime", c.getTime());
 //			o.put("nextUpdateTime", c.getTime());
 //			o.put("lastUpdate",new Date());

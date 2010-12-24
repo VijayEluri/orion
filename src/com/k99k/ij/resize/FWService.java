@@ -322,14 +322,23 @@ public class FWService implements Runnable {
 	 * @throws Exception
 	 */
 	private final void uploadFile(FTPClient client,File file) throws Exception{
-		if (file.isDirectory()) {
-			String[] children  = file.list();
-			for (int i = 0; i < children .length; i++) {
-				uploadFile(client,new File(file, children[i]));
+		try {
+			if (file.isDirectory()) {
+				log.info("remotePath----:"+client.currentDirectory());
+//				String remotePath = client.currentDirectory()+"/"+file.getName();
+//				log.info("remotePath:"+remotePath);
+//				client.createDirectory(remotePath);
+//				client.changeDirectory(remotePath);
+				String[] children  = file.list();
+				for (int i = 0; i < children .length; i++) {
+					uploadFile(client,new File(file, children[i]));
+				}
+			}else{
+				client.upload(file);
+				log.info("uploadFile:"+file.getName());
 			}
-		}else{
-			client.upload(file);
-			log.info("uploadFile:"+file.getName());
+		} catch (Exception e) {
+			log.error("uploadFile error:", e);
 		}
 		
 	}
@@ -343,10 +352,20 @@ public class FWService implements Runnable {
 				FTPClient client = new FTPClient();
 				client.connect(ftps[i].get("ip"),Integer.parseInt(ftps[i].get("port")));
 				client.login(ftps[i].get("user"),ftps[i].get("pwd"));
-				client.changeDirectory(ftps[i].get("dir"));
-				String cdir = client.currentDirectory();
-				log.info("synftp:"+client.getHost()+" dir:"+cdir);
-				uploadFile(client,new File(tmpPath));			
+				String cdir = ftps[i].get("dir");
+				client.changeDirectory(cdir);
+				if (!client.currentDirectory().equals(cdir)) {
+					client.createDirectory(cdir);
+					client.changeDirectory(cdir);
+				}
+				log.info("synftp:"+client.getHost()+" dir:"+cdir+" tmpPath:"+tmpPath);
+				uploadFile(client,new File(tmpPath));	
+				//上传源图
+				cdir = ftps[i].get("src")+"/"+now();
+				client.createDirectory(cdir);
+				client.changeDirectory(cdir);
+				log.info("synftp-src:"+client.getHost()+" srcdir:"+cdir+" srcPath:"+srcPath);
+				uploadFile(client,new File(srcPath));
 				client.disconnect(true);
 			} catch (Exception e) {
 				log.error("synftps error!", e);
@@ -469,6 +488,10 @@ public class FWService implements Runnable {
 		}
 	}
 
+	static final String now(){
+		return new SimpleDateFormat("yyyy_MM_dd-HH_mm_ss").format(new Date());
+	}
+	
 	@Override
 	public void run() {
 		runFlag = this.init();
@@ -484,15 +507,16 @@ public class FWService implements Runnable {
 				break;
 			case TASK_BUILD:
 				//以日期时间为临时目录
-				tmpPath = this.datePath+"/"+new SimpleDateFormat("yyyy_MM_dd-HH_mm_ss").format(new Date());
+				tmpPath = this.datePath+"/"+now();
+				srcPath = this.srcPath+"/"+now();
 				//发布图片
 				ArrayList<String> picList = ij.buildNewPics(readyPath, tmpPath, getInitIDMap(),srcPath);
+				//处理临时文件
+				copyFullDir(new File(tmpPath),new  File(outPath));
 				//更新数据库
 				re = this.updateDB(picList);
 				//同步ftp
 				this.synFtps();
-				//处理临时文件
-				copyFullDir(new File(tmpPath),new  File(outPath));
 				log.info("=========================\n");
 				break;
 			default:

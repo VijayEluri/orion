@@ -11,7 +11,7 @@
 "mongoIP":"127.0.0.1",
 "mongoPort":"27017",
 "synftp":[
-	{"ip":"202.102.40.43","port":"21","dir":"/testUpload",
+	{"ip":"202.102.40.43","port":"21","dir":"/testUpload","src":"/testSrc",
 	"user":"keel","pwd":"6667441"}
 ]
 }
