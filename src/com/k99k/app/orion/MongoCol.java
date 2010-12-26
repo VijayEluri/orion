@@ -28,6 +28,9 @@ public class MongoCol {
 	private String pwd = "6667441";
 	private static Mongo mongo;
 	private DB db;
+	private int maxWaitTime;
+	private int connectionsPerHost;
+	private int threadsAllowedToBlockForConnectionMultiplier;
 	
 	
 	
@@ -44,14 +47,20 @@ public class MongoCol {
 	 * @param dbName
 	 * @param user
 	 * @param pwd
+	 * @param maxWaitTime
+	 * @param connectionsPerHost
+	 * @param threadsAllowedToBlockForConnectionMultiplier
 	 */
-	public MongoCol(String ip, int port, String dbName, String user, String pwd) {
+	public MongoCol(String ip, int port, String dbName, String user, String pwd,int maxWaitTime,int connectionsPerHost,int threadsAllowedToBlockForConnectionMultiplier) {
 		super();
 		this.ip = ip;
 		this.port = port;
 		this.dbName = dbName;
 		this.user = user;
 		this.pwd = pwd;
+		this.connectionsPerHost = connectionsPerHost;
+		this.maxWaitTime = maxWaitTime;
+		this.threadsAllowedToBlockForConnectionMultiplier = threadsAllowedToBlockForConnectionMultiplier;
 	}
 
 	/**
@@ -84,20 +93,21 @@ public class MongoCol {
 			if (this.db != null && this.db.getName().equals(this.dbName)) {
 				return this.db;
 			}
-			
+			boolean auth = false;
 			if (mongo == null) {
 				//System.setProperty("MONGO.POOLSIZE", "100");
 				ServerAddress sadd = new ServerAddress(this.ip, this.port);
 				MongoOptions opt = new MongoOptions();
 				opt.autoConnectRetry = false;
-				opt.connectionsPerHost = 50;
-				opt.threadsAllowedToBlockForConnectionMultiplier = 50;
-				opt.maxWaitTime = 5000;
+				opt.connectionsPerHost = this.connectionsPerHost;
+				opt.threadsAllowedToBlockForConnectionMultiplier = this.threadsAllowedToBlockForConnectionMultiplier;
+				opt.maxWaitTime = this.maxWaitTime;
 				mongo = new Mongo(sadd,opt);
+				this.db = mongo.getDB(this.dbName);
+				auth = db.authenticate(this.user, this.pwd.toCharArray());
 				System.out.println("===========new mongo built!!============"+new Date());
 			}
-			this.db = mongo.getDB(this.dbName);
-			boolean auth = db.authenticate(this.user, this.pwd.toCharArray());
+			
 			if (auth) {
 				return db;
 			}else{
@@ -123,7 +133,12 @@ public class MongoCol {
 	}
 	
 	public void close(){
-		mongo.close();
+		if (mongo != null) {
+			this.db = null;
+			mongo.close();
+			mongo = null;
+			System.out.println("MongoCol closed!");
+		}
 	}
 
 	/**

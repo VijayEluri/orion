@@ -13,13 +13,16 @@ import java.util.regex.Pattern;
 
 import org.bson.types.BasicBSONList;
 import org.bson.types.ObjectId;
+import org.stringtree.json.JSONReader;
+import org.stringtree.json.JSONValidatingReader;
 
+import com.k99k.tools.IO;
+import com.k99k.tools.StringUnit;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
-import com.mongodb.MongoException;
-import com.mongodb.WriteResult;
+import com.mongodb.util.JSON;
 
 /**
  * 处理图片请求
@@ -32,7 +35,23 @@ public class FWall implements Runnable {
 //	public static final String SORT_BY_DOWN = "down";
 //	public static final String SORT_BY_STAR = "star";
 	
-	private final static MongoCol mongoCol  = new MongoCol();
+	public FWall(String iniFile){
+		this.readIni(iniFile);
+	}
+	
+//	/**
+//	 * 配置文件位置
+//	 */
+//	private String iniFile;
+	
+	/**
+	 * 索引Json文件位置
+	 */
+	private String indexJsonPath = "/WEB-INF/fw_index.json";
+	
+	private MongoCol mongoCol;//  = new MongoCol();
+	
+	private final JSONReader jsonReader = new JSONValidatingReader();
 	
 	/**
 	 * 类别Map，用于缓存pic数据.查找路径:cateMap->排序字段(如"down")->序号(计算升降序得出序号)
@@ -76,9 +95,24 @@ public class FWall implements Runnable {
 	private int starSleep = 5;
 	
 	/**
+	 * 暂停线程中的 任何处理
+	 */
+	private boolean pause = false;
+	/**
 	 * 下次重建Star的时间点
 	 */
 	private Date nextReIndexStarTime = new Date();
+	
+	/**
+	 * 每天更新时间的分钟数
+	 */
+	private int dayUpdateMin = 12;
+	
+	/**
+	 * 每天更新时间的秒数
+	 */
+	private int dayUpdateSec = 01;
+	
 	
 	/**
 	 * ### 适用于ver2.0版的请求 ###
@@ -185,10 +219,15 @@ public class FWall implements Runnable {
 					int size = list.size();
 					for (int i = 0; i < size; i++) {
 						WallPic w = objIdMap.get(list.get(i));
+						if (w == null) {
+							System.out.println("===========188 ERROR=======:"+list.get(i));
+							continue;
+						}
+						//FIXME 188行，报java.lang.NullPointerException
 						String catePicIdPath = w.getCate()+"#"+w.getPicId();
 						sb.append("\"").append(catePicIdPath).append("\",");
 					}
-					if (size > 0) {
+					if (sb.charAt(sb.length()-1) == ',') {
 						sb.delete(sb.length()-1,sb.length());
 					}
 					sb.append("]");
@@ -196,7 +235,8 @@ public class FWall implements Runnable {
 				}
 			}
 		} catch (Exception e) {
-			System.out.println("------"+new Date());e.printStackTrace();
+			System.out.println("------"+new Date());
+			e.printStackTrace();
 			return "";
 		}
 		return starJson;
@@ -369,7 +409,17 @@ public class FWall implements Runnable {
 		user.put("userName", args.get("userName").toString());
 		user.put("imsi", args.get("imsi").toString());
 		BasicDBObject screen = new BasicDBObject();
-		screen.append("width",Integer.parseInt(args.get("width").toString())).append("height", Integer.parseInt(args.get("height").toString())).append("dpi", Integer.parseInt(args.get("dpi").toString()));
+		//FIXME 处理小数的情况
+		try {
+			screen.append("width",Integer.parseInt(args.get("width").toString())).append("height", Integer.parseInt(args.get("height").toString())).append("dpi", Integer.parseInt(args.get("dpi").toString()));
+		} catch (Exception e) {
+			System.out.println("---------");
+			System.out.println("width:"+args.get("width").toString());
+			System.out.println("height:"+args.get("height").toString());
+			System.out.println("dpi:"+args.get("dpi").toString());
+			System.out.println("---------");
+			e.printStackTrace();
+		}
 		user.put("screen", screen);
 		BasicDBObject handset = new BasicDBObject();
 		handset.append("display", args.get("display").toString())
@@ -425,117 +475,197 @@ public class FWall implements Runnable {
 		config.put(updateStr, s);
 	}
 	
-	/**
-	 * 更新wallConfig的某一类的maxPic值
-	 * @param config
-	 * @param catePre
-	 * @param maxPic
-	 */
-	private final void updateCateMaxPic(DBObject config,String catePre,int maxPic){
-		BasicBSONList list = ((BasicBSONList)config.get("index"));
-		//第0个为最新，跳过从1开始
-		for (int i = 1; i < list.size(); i++) {
-			BasicDBObject o = (BasicDBObject)list.get(i);
-			if (((String) o.get("picPre")).equals(catePre)) {
-				o.put("maxPic", maxPic);
-				return;
-			}
+//	/**
+//	 * 更新wallConfig的某一类的maxPic值
+//	 * @param bsonList config中的index节点
+//	 * @param config
+//	 * @param catePre
+//	 * @param maxPic
+//	 */
+//	private final void updateCateMaxPic(BasicBSONList bsonList,DBObject config,String catePre,int maxPic){
+//		//第0个为最新，跳过从1开始
+//		for (int i = 1; i < bsonList.size(); i++) {
+//			BasicDBObject o = (BasicDBObject)bsonList.get(i);
+//			if (((String) o.get("picPre")).equals(catePre)) {
+//				o.put("maxPic", maxPic);
+//				return;
+//			}
+//		}
+//	}
+	
+	@SuppressWarnings("unchecked")
+	final Map<String, Object> readJsonIni(String iniPath,String encode) {
+		try {
+			String str = IO.readTxt(iniPath, encode);
+			Map<String, Object> json = (Map<String, Object>) jsonReader.read(str);
+			return json;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
 		}
+
+	}
+	
+	/**
+	 * 读取配置文件,一般是/WEB-INF/fw_ini.json
+	 * @param iniFile json形式
+	 * @return 是否读取成功
+	 */
+	@SuppressWarnings("unchecked")
+	final boolean readIni(String iniFile){
+		this.pause = true;
+		try {
+			Map<String,Object> ini = this.readJsonIni(iniFile, "utf-8");
+			if (ini == null) {
+				return false;
+			}
+			
+			//其他配置
+			this.dayUpdateMin = Integer.parseInt(ini.get("dayUpdateMin").toString());
+			this.dayUpdateSec = Integer.parseInt(ini.get("dayUpdateSec").toString());
+			this.newPicsOneDay = Integer.parseInt(ini.get("newPicsOneDay").toString());
+			this.indexJsonPath = iniFile.substring(0,iniFile.lastIndexOf("/")+1)+ini.get("fwIndex").toString();
+			//读取索引配置文件
+			this.wallconfig = IO.readTxt(this.indexJsonPath, "UTF-8");
+			System.out.println("indexJsonPath:"+indexJsonPath);
+			
+			//数据库配置
+			Map<String,String> mongoIni = (Map<String, String>) ini.get("mongo");
+			String mongoIp = mongoIni.get("ip");
+			int mongoPort = Integer.parseInt(mongoIni.get("port"));
+			String mongoDb = mongoIni.get("db");
+			String mongoUser = mongoIni.get("user");
+			String mongoPwd = mongoIni.get("pwd");
+			int maxWaitTime = Integer.parseInt(mongoIni.get("maxWaitTime"));
+			int connectionsPerHost = Integer.parseInt(mongoIni.get("connectionsPerHost"));
+			int threadsAllowedToBlockForConnectionMultiplier = Integer.parseInt(mongoIni.get("threadsAllowedToBlockForConnectionMultiplier"));
+			if (this.mongoCol != null) {
+				this.mongoCol.close();
+			}
+			this.mongoCol = new MongoCol(mongoIp, mongoPort, mongoDb, mongoUser, mongoPwd,maxWaitTime,connectionsPerHost,threadsAllowedToBlockForConnectionMultiplier);
+		} catch (Exception e) {
+			this.pause = false;
+			e.printStackTrace();
+			return false;
+		}
+		this.pause = false;
+		return true;
 	}
 	
 	final boolean init(){
+		this.pause = true;
 		try {
-			//读取数据库生成配置文件
-			DBCollection coll = mongoCol.getColl("wallConfig");
-			DBCollection picColl = mongoCol.getColl("wallPic");
-			DBCursor cur = coll.find();
-			DBObject config = null;
-			if (cur.hasNext()) {
-				config = cur.next();
-				//生成前50页最新图的列表
-				DBCursor newCur = picColl.find(new BasicDBObject("topId",1).append("state", 1)).sort(new BasicDBObject("addTime",-1)).limit(60*4);
-				int i = 0;
-				//int j = 0;
-				BasicBSONList pics = (BasicBSONList)(((BasicDBObject)((BasicBSONList)config.get("index")).get(0)).get("pics"));
-				pics.clear();
-				BasicBSONList pageIndex = new BasicBSONList();
-//				String lastUpdateTime = (String) config.get("update");
-//				lastUpdateTime = lastUpdateTime.substring(lastUpdateTime.indexOf(":")+1);
-//				boolean alreadyUpdateTime = false;
-				while (newCur.hasNext()) {
-					DBObject newobj = newCur.next();
-//					if (!alreadyUpdateTime) {
-//						alreadyUpdateTime = true;
-//						lastUpdateTime = StringUnit.getTime("yyyy-MM-dd", (Date)newobj.get("addTime"));
-//					}
-					//使用cate+#+picId
-					String s = (String)newobj.get("cate")+"#"+(Integer) newobj.get("picId");
-					pageIndex.put(i, s);
-					if (i == 3) {
-						i = 0;
-						//j为新增的页数
-						//j++;
-						//加到数组末尾
-						pics.add(pageIndex);
-//						System.out.println(pageIndex);
-						pageIndex = new BasicBSONList();
-						
-
-					}else{
-						i++;
-					}
-					
-				}
-				
-//				System.out.println("---------------");
-//				System.out.println(pics);
-				/*
-				//删除多余的页数,即保持 pics的size为60
-				System.out.println("pics.size():"+pics.size());
-				if (pics.size()>60) {
-					for (int k = 59; k < pics.size(); k++) {
-						pics.remove(k);
-					}
-				}
-				*/
-				
-				//((BasicDBObject)((BasicBSONList)o.get("index")).get(0)).put("pics", index);
-				
-				//更新config的最新更新时间
-				//if (alreadyUpdateTime) {
-					DBCollection coll_day = mongoCol.getColl("wallDay");
-					DBCursor cur_day = coll_day.find(new BasicDBObject("id",1));
-					if (cur_day.hasNext()) {
-						DBObject dbo = (DBObject) cur_day.next();
-						this.lastUpdate = (Date) dbo.get("lastUpdate");
-					}
-					String lastUpdateTime = StringUnit.getTime("yyyy-MM-dd", this.lastUpdate);
-					updateConfigTime(config,"update",lastUpdateTime);
-					updateConfigTime(config,"updateCN",lastUpdateTime);
-					updateConfigTime(config,"updateEN",lastUpdateTime);
-					updateConfigTime(config,"updateJP",lastUpdateTime);
-					updateConfigTime(config,"updateTW",lastUpdateTime);
-				//}
-				this.wallconfig = config.toString();
-//				System.out.println(wallconfig);
-			}else{
-				this.wallconfig = "";
-				System.out.println("=========Error init!=========");
-//			return false;
-			}
 			
+			
+			//读取数据库生成配置文件
+			//DBCollection coll = mongoCol.getColl("wallConfig");
+			DBCollection picColl = mongoCol.getColl("wallPic");
+			//DBCursor cur = coll.find();
+			//先由配置文件转换到DBObject
+			DBObject config = (DBObject) JSON.parse(this.wallconfig);
+			//if (cur.hasNext()) {
+			//config = cur.next();
+			//生成前50页最新图的列表
+			DBCursor newCur = picColl.find(new BasicDBObject("topId",1).append("state", 1)).sort(new BasicDBObject("addTime",-1)).limit(60*4);
+			int i = 0;
+			//int j = 0;
+			BasicBSONList index = new BasicBSONList();
+			BasicBSONList pics = new BasicBSONList();//(BasicBSONList)(((BasicDBObject)((BasicBSONList)config.get("index")).get(0)).get("pics"));
+			//pics.clear();
+			BasicBSONList pageIndex = new BasicBSONList();
+			while (newCur.hasNext()) {
+				DBObject newobj = newCur.next();
+				//使用cate+#+picId
+				String s = (String)newobj.get("cate")+"#"+(Integer) newobj.get("picId");
+				pageIndex.put(i, s);
+				if (i == 3) {
+					i = 0;
+					//j为新增的页数
+					//j++;
+					//加到数组末尾
+					pics.add(pageIndex);
+//						System.out.println(pageIndex);
+					pageIndex = new BasicBSONList();
+					
+
+				}else{
+					i++;
+				}
+				
+			}
+			//index中的第一个位置加入最新节点
+			BasicDBObject picsNode = new BasicDBObject();
+			picsNode.put("cate", "Newest");
+			picsNode.put("cateCN", "最新");
+			picsNode.put("cateEN", "Newest");
+			picsNode.put("cateJP", "最新");
+			picsNode.put("cateTW", "最新");
+			picsNode.put("pics", pics);
+			index.put("0", picsNode);
+			
+			
+			
+			//更新config的最新更新时间
+			DBCollection coll_day = mongoCol.getColl("wallDay");
+			DBCursor cur_day = coll_day.find(new BasicDBObject("id",1));
+			if (cur_day.hasNext()) {
+				DBObject dbo = (DBObject) cur_day.next();
+				this.lastUpdate = (Date) dbo.get("lastUpdate");
+			}
+			String lastUpdateTime = StringUnit.getTime("yyyy-MM-dd", this.lastUpdate);
+			updateConfigTime(config,"update",lastUpdateTime);
+			updateConfigTime(config,"updateCN",lastUpdateTime);
+			updateConfigTime(config,"updateEN",lastUpdateTime);
+			updateConfigTime(config,"updateJP",lastUpdateTime);
+			updateConfigTime(config,"updateTW",lastUpdateTime);
+//			this.wallconfig = config.toString();
+//				System.out.println(wallconfig);
+		//}else{
+			//this.wallconfig = "";
+			//System.out.println("=========Error init!=========");
+//			return false;
+		//}
 		
+	
 			
 			//读取所有图片生成各种排序的图片映射
 			DBCollection cateColl = mongoCol.getColl("wallCate");
 //			DBCollection picColl = mongoCol.getColl("wallPic");
-			cur = cateColl.find(new BasicDBObject("state",1));
+			DBCursor cur = cateColl.find(new BasicDBObject("state",1));
+			//用于生成排序索引mMap
 			HashMap<String,ArrayList<String[]>> mMap = new HashMap<String, ArrayList<String[]>>(100);
 			HashMap<String,Integer> ccMap = new HashMap<String, Integer>();
 			while (cur.hasNext()) {
 				DBObject o = cur.next();
 				//String cate = (String) o.get("cateName");
 				String catePre = (String) o.get("catePre");
+				String cateName = (String)o.get("cateName");
+				String cateCN = (String)o.get("cn");
+				String cateEN = (String)o.get("en");
+				String cateJP = (String)o.get("jp");
+				String cateTW = (String)o.get("tw");
+				String cateSub = o.get("sub").toString();
+				String cateStyle = o.get("style").toString();
+				int maxPic = Integer.parseInt(o.get("max").toString());
+				//更新config中该类的maxPic
+				if (config != null) {
+					DBCursor pcur = picColl.find(new BasicDBObject("cate",catePre).append("state", 1)).sort(new BasicDBObject("picId",-1)).limit(1);
+					if (pcur.hasNext()) {
+						maxPic = (Integer)((DBObject)pcur.next()).get("picId");
+					}
+				}
+				//生成该类的节点
+				DBObject cateNode = new BasicDBObject();
+				cateNode.put("cate", cateName);
+				cateNode.put("picPre", catePre);
+				cateNode.put("cateCN", cateCN);
+				cateNode.put("cateEN", cateEN);
+				cateNode.put("cateJP", cateJP);
+				cateNode.put("cateTW", cateTW);
+				cateNode.put("maxPic", maxPic);
+				cateNode.put("sub", cateSub);
+				cateNode.put("style", cateStyle);
+				index.add(cateNode);
 				
 				//以时间为序
 				DBCursor pcur = picColl.find(new BasicDBObject("cate",catePre).append("state", 1)).sort(new BasicDBObject("picId",1));
@@ -543,15 +673,6 @@ public class FWall implements Runnable {
 				if (timeList.size() > 0) {
 					mMap.put(catePre+"#time", timeList);
 //					updateCateMaxPic(config,catePre,(timeList.get(timeList.size()-1)));
-				}
-				
-				//更新config中该类的maxPic
-				if (config != null) {
-					pcur = picColl.find(new BasicDBObject("cate",catePre).append("state", 1)).sort(new BasicDBObject("picId",-1)).limit(1);
-					if (pcur.hasNext()) {
-						int maxPic = (Integer)((DBObject)pcur.next()).get("picId");
-						updateCateMaxPic(config,catePre,maxPic);
-					}
 				}
 				
 				//以下载量为序
@@ -579,9 +700,10 @@ public class FWall implements Runnable {
 				System.out.println("=======picCateMap loaded========");
 			}
 			//最后更新一次wallConfig
+			config.put("index", index);
 			this.wallconfig = config.toString();
 			
-			//生成cate#picID缓存
+			//生成oid:WallPic缓存
 			DBCursor ccur = picColl.find(new BasicDBObject("state",1)).sort(new BasicDBObject("picId",1));
 			while (ccur.hasNext()) {
 				DBObject o = ccur.next();
@@ -598,8 +720,8 @@ public class FWall implements Runnable {
 				BasicBSONList parr = (BasicBSONList)o.get("picPath");
 				int size = parr.size();
 				String[] paths = new String[size];
-				for (int i = 0; i < size; i++) {
-					paths[i] = (String) parr.get(i);
+				for (int j = 0; j < size; j++) {
+					paths[j] = (String) parr.get(j);
 				}
 				pic.setPicPath(paths);
 				pic.setPicSource((String)o.get("picSource"));
@@ -620,6 +742,7 @@ public class FWall implements Runnable {
 			return false;
 		}
 		
+		this.pause = false;
 		
 		return true;
 	}
@@ -713,7 +836,7 @@ public class FWall implements Runnable {
 		return cateList;
 	}
 	
-	void test(){
+//	void test(){
 //		String url = "/orion/ava/b_ava12.jpg";
 //		System.out.println(this.getPicFromUrl(url, "time", 1));
 		
@@ -741,7 +864,7 @@ public class FWall implements Runnable {
 //			System.out.println(s);
 //		}
 //		mongoCol.close();
-	}
+//	}
 	
 	
 	/**
@@ -761,6 +884,7 @@ public class FWall implements Runnable {
 	}
 
 	
+	@SuppressWarnings("unchecked")
 	public final void addTask(Map reqMap){
 		this.taskList.add(reqMap);
 	}
@@ -772,19 +896,25 @@ public class FWall implements Runnable {
 	public void run() {
 		try {
 			//先初始化
-			this.init();
+			if(!this.init()){
+				return;
+			}
 			while (isRun) {
-				//执行任务
-				if (!this.taskList.isEmpty()) {
-					Map task = (Map) this.taskList.remove(0);
-					//目前只有登录请求任务，直接执行
-					this.login(task);
-				}
 				
-				//处理索引更新
-				this.checkReIndex();
-				//处理每天的更新图
-				updateByDay();
+				if (!pause) {
+					//执行任务
+					if (!this.taskList.isEmpty()) {
+						Map task = (Map) this.taskList.remove(0);
+						//目前只有登录请求任务，直接执行
+						this.login(task);
+					}
+					
+					//处理索引更新
+					this.checkReIndex();
+					//处理每天的更新图
+					updateByDay();
+				}
+			
 				//sleep暂为1秒
 				Thread.sleep(1000);
 			}
@@ -866,23 +996,13 @@ public class FWall implements Runnable {
 			boolean needInit = false;
 			//当更新数大于0时进行日更新操作
 			if (this.newPicsOneDay > 0) {
-//				DBCollection coll_cate = mongoCol.getColl("wallCate");
 				DBCollection coll_pic = mongoCol.getColl("wallPic");
-//				BasicBSONList newPic4Group = new BasicBSONList();
-//				//将json String 转为DBObject
-//				DBObject config = (DBObject) com.mongodb.util.JSON.parse(this.wallconfig);
-//				//定位到最新的节点
-//				BasicBSONList pics = (BasicBSONList)(((BasicDBObject)((BasicBSONList)config.get("index")).get(0)).get("pics"));
-				
-				
 				
 				//将state为2的新图片按类别排序，再按picId顺序排，避免更新乱掉
 				DBCursor cur = coll_pic.find(new BasicDBObject("state",2)).sort((new BasicDBObject("cate",1)).append("picId",1)).limit(this.newPicsOneDay);
 				
 				while (cur.hasNext()) {
 					DBObject dbo = (DBObject) cur.next();
-//					int picId = (Integer)dbo.get("picId");
-//					String cate = (String)dbo.get("cate");
 					ObjectId oid = (ObjectId) dbo.get("_id");
 //					//更新类别中的max
 //					if (cateCountMap.get(cate) < picId) {
@@ -912,12 +1032,12 @@ public class FWall implements Runnable {
 				}		
 				
 			}else{
-				//延迟2分钟再等待主服务器数据更新后再更新数据
-				try {
-					Thread.sleep(1000*60*2);
-				} catch (InterruptedException e) {
-					return;
-				}
+				//延迟2分钟再等待主服务器数据更新后再更新数据 --通过配置文件中指定更新时间才实现延迟
+//				try {
+//					Thread.sleep(1000*60*2);
+//				} catch (InterruptedException e) {
+//					return;
+//				}
 				//是否数据有更新，如有则重新初始化
 				DBCollection coll = mongoCol.getColl("wallDay");
 				DBCursor cur = coll.find(new BasicDBObject("id",1));
@@ -929,7 +1049,6 @@ public class FWall implements Runnable {
 						this.lastUpdate = lastUpdateT;
 						//重新初始化
 						needInit = true;
-						//this.init();
 					}else{
 						this.lastUpdate = lastUpdateT;
 					}
@@ -961,13 +1080,6 @@ public class FWall implements Runnable {
 			}
 		}
 	}
-	
-	/**
-	 * @return mongoCol
-	 */
-	public final static MongoCol getMongoCol(){
-		return mongoCol;
-	}
 
 	/**
 	 * @return the wallconfig
@@ -997,7 +1109,8 @@ public class FWall implements Runnable {
 	/**
 	 * 立即处理每日更新索引,通过调整nextUpdateTime到1小时前实现
 	 */
-	public boolean updateNewPicsNow(){
+	public String updateNewPicsNow(){
+		String re = "fail";
 		try {
 			Calendar c = Calendar.getInstance();
 			c.add(Calendar.HOUR_OF_DAY, -1);
@@ -1006,24 +1119,35 @@ public class FWall implements Runnable {
 			if (cur.hasNext()) {
 				DBObject o = cur.next();
 				o.put("nextUpdateTime", c.getTime());
-				o.put("lastUpdate",new Date());
+				//o.put("lastUpdate",new Date());
 				coll.update(new BasicDBObject("id",1), o);
 			}
 			
 			this.nextUpdateTime = c.getTime(); 
+			return this.nextUpdateTime.toString();
 		} catch (Exception e) {
 			e.printStackTrace();
-			return false;
+			return re;
 		}
-		return true;
 	}
+	
+	
+
+	/**
+	 * @return the mongoCol
+	 */
+	public final MongoCol getMongoCol() {
+		return mongoCol;
+	}
+
+
 
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		FWall f = new FWall();
-		FWall.mongoCol.setIp("202.102.113.204");
+		FWall f = new FWall("/WEB-INF/fw_ini.json");
+		//f.mongoCol.setIp("202.102.113.204");
 		
 		/*
 		Calendar c = Calendar.getInstance();

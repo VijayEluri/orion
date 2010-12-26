@@ -1,10 +1,10 @@
-package com.k99k.app.orion;
+package com.k99k.tools;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class StringUnit {
+public final class StringUnit {
 	
 	private static final DateFormat NORMAL_TIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	private static final DateFormat NORMAL_DATE_FORMAT = new SimpleDateFormat("yyyyMMdd");
@@ -40,4 +40,7 @@ public class StringUnit {
 	public static final String getTime(String partern,Date date){
 		return  new SimpleDateFormat(partern).format(date);
 	}
+	
+	
+	
 }

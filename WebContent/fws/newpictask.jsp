@@ -11,7 +11,7 @@ String oid = "";
 String re = "task id error.";
 if(request.getParameter("oid") != null && request.getParameter("oid").length()>5){
 	oid = request.getParameter("oid").trim();
-	DBCollection coll = FWall.getMongoCol().getColl("wallTask");
+	DBCollection coll = AppFilter.getFwall().getMongoCol().getColl("wallTask");
 	DBCursor cur = coll.find(new BasicDBObject("_id",new ObjectId(oid)));
 	if(cur.hasNext()){
 		int state  = (Integer)((DBObject)cur.next()).get("state");

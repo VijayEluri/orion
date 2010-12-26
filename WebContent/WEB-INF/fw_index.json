@@ -1,0 +1,160 @@
+{
+   "adkey":"game music movie video tool",
+   "author":"Keel",
+   "version":2,
+   "saveSdPath":"/sdcard/wallpaper/",
+   "server":"http://202.102.113.204/orion/",
+   "starmenu":{
+      "ver":1,
+      "show1":[
+         {
+            "txt":"Show pictures:",
+            "txtEN":"Show pictures:",
+            "txtCN":"浏览方式:",
+            "txtTW":"瀏覽方式:",
+            "txtJP":"陳列:",
+            "type":"title"
+         },
+         {
+            "txt":"Shuffle all categories",
+            "txtEN":"Shuffle all categories",
+            "txtCN":"随机混和",
+            "txtTW":"Shuffle 隨機",
+            "txtJP":"シャッフル",
+            "ison":false,
+            "type":"order",
+            "sort":"shuffle",
+            "asc":0
+         },
+         {
+            "txt":"Last position",
+            "txtEN":"Last position",
+            "txtCN":"最后的位置",
+            "txtTW":"最後的位置",
+            "txtJP":"最終位置",
+            "ison":false,
+            "type":"order",
+            "sort":"last",
+            "asc":0
+         },
+         {
+            "txt":"Stars:",
+            "txtEN":"Stars:",
+            "txtCN":"星星:",
+            "txtTW":"星星:",
+            "txtJP":"星:",
+            "type":"title"
+         },
+         {
+            "txt":"My star pictures",
+            "txtEN":"My star pictures",
+            "txtCN":"我加星的图",
+            "txtTW":"我加星的圖",
+            "txtJP":"私の星",
+            "type":"mystars"
+         }
+      ],
+      "show2":[
+         {
+            "txt":"Order by:",
+            "txtEN":"Order by:",
+            "txtCN":"排序:",
+            "txtTW":"排序:",
+            "txtJP":"ソート:",
+            "type":"title"
+         },
+         {
+            "txt":"Newest",
+            "txtEN":"Newest",
+            "txtCN":"最新",
+            "txtTW":"最新",
+            "txtJP":"最新",
+            "ison":false,
+            "type":"order",
+            "sort":"time",
+            "asc":0
+         },
+         {
+            "txt":"Downloads",
+            "txtEN":"Downloads",
+            "txtCN":"下载量",
+            "txtTW":"下載量",
+            "txtJP":"ダウンロード",
+            "ison":false,
+            "type":"order",
+            "sort":"down",
+            "asc":0
+         },
+         {
+            "txt":"Lucky",
+            "txtEN":"Lucky",
+            "txtCN":"幸运",
+            "txtTW":"幸運",
+            "txtJP":"ラッキー",
+            "ison":false,
+            "type":"order",
+            "sort":"random",
+            "asc":0
+         },
+         {
+            "txt":"Stars",
+            "txtEN":"Stars",
+            "txtCN":"加星数",
+            "txtTW":"加星數",
+            "txtJP":"星",
+            "ison":false,
+            "type":"order",
+            "sort":"star",
+            "asc":0,
+            "noshow":1
+         },
+         {
+            "txt":"Stars:",
+            "txtEN":"Stars:",
+            "txtCN":"星星:",
+            "txtTW":"星星:",
+            "txtJP":"星:",
+            "type":"title"
+         },
+         {
+            "txt":"My star pictures",
+            "txtEN":"My star pictures",
+            "txtCN":"我加星的图",
+            "txtTW":"我加星的圖",
+            "txtJP":"私の星",
+            "type":"mystars"
+         }
+      ],
+      "show3":[
+         {
+            "txt":"Stars:",
+            "txtEN":"Stars:",
+            "txtCN":"星星:",
+            "txtTW":"星星:",
+            "txtJP":"星:",
+            "type":"title"
+         },
+         {
+            "txt":"Add a star for this pic#Remove this star",
+            "txtEN":"Add a star for this pic#Remove this star",
+            "txtCN":"加星#取消加星",
+            "txtTW":"加星#取消加星",
+            "txtJP":"星を追加する#キャンセルの星",
+            "type":"addstar"
+         }
+      ],
+      "close":{
+         "txt":"[ Close ]",
+         "txtEN":"[ Close ]",
+         "txtCN":"[ 关闭 ]",
+         "txtTW":"[ 關閉 ]",
+         "txtJP":"[ クローズ ]"
+      }
+   },
+   "state":1,
+   "update":"update:2010-12-18",
+   "updateCN":"图库更新于:2010-12-18",
+   "updateEN":"update:2010-12-18",
+   "updateJP":"ギャラリー更新:2010-12-18",
+   "updateTW":"圖庫更新於:2010-12-18"
+}

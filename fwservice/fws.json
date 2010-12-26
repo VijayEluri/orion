@@ -1,0 +1,17 @@
+{
+"prePath":"d:/Tomcat6/webapps/ROOT/fws/prepath",
+"readyPath":"d:/Tomcat6/webapps/ROOT/fws/ready",
+"outPath":"d:/Tomcat6/webapps/ROOT/orion",
+"srcPath":"d:/Tomcat6/webapps/ROOT/fws/src",
+"datePath":"d:/Tomcat6/webapps/ROOT/fws/date",
+"webPath":"/orion",
+"sleep":"5000",
+"preWidth":"300",
+"preHeight":"200",
+"mongoIP":"127.0.0.1",
+"mongoPort":"27017",
+"synftp":[
+	{"ip":"202.102.40.43","port":"21","dir":"/webapps/ROOT/orion","src":"/webapps/ROOT/fws/src",
+	"user":"keel","pwd":"6667441"}
+]
+}

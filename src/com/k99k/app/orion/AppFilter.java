@@ -36,7 +36,9 @@ public class AppFilter implements Filter {
 		fwall.setRun(false);
 	}
 	
-	private final static FWall fwall = new FWall();
+	private static FWall fwall;// = new FWall("/WEB-INF/fw_ini.json");
+	
+	private boolean test = false;
 	
 	private final static JSONReader jsonReader = new JSONValidatingReader();
 	
@@ -98,11 +100,13 @@ public class AppFilter implements Filter {
 					e.printStackTrace();
 					chain.doFilter(request, response);
 				}
+				//TODO 后期根据语言指向到不同的fw_ini文件
 				chain.doFilter(request, response);
 				return;
 			}
-			//
 			
+			
+			//此处不return,未匹配时向下走
 		}
 		
 		//处理登录(老)
@@ -156,6 +160,11 @@ public class AppFilter implements Filter {
 			if (toPic != null && toPic.length == 2) {
 				//System.out.println(toPic);
 				resp.setHeader("pic_oid", toPic[0]);
+				if (test) {
+					String s = "http://202.102.113.204"+toPic[1];
+					resp.sendRedirect(s);
+					return;
+				}
 				RequestDispatcher dispatcher = req.getRequestDispatcher(toPic[1]);
 				dispatcher.forward(request, resp);
 				return;
@@ -259,17 +268,23 @@ public class AppFilter implements Filter {
 		//-----------------------------------
 		//updatenewpicsnow
 		if (url.indexOf("updatenewpicsnow") > -1) {
-			boolean re = fwall.updateNewPicsNow();
-			response.getWriter().print(re);
+			response.getWriter().print( fwall.updateNewPicsNow());
 			return;
 		}
 		//-----------------------------------
 		//getMongoConState
 		if (url.indexOf("getmongostate") > -1) {
 			StringBuilder sb = new StringBuilder();
-			sb.append("server:").append(FWall.getMongoCol().getIp());
-			sb.append("<br /> port:").append(FWall.getMongoCol().getPort());
+			sb.append("server:").append(fwall.getMongoCol().getIp());
+			sb.append("<br /> port:").append(fwall.getMongoCol().getPort());
 			response.getWriter().print(sb.toString());
+			return;
+		}
+		//-----------------------------------
+		//重新初始化Fwall
+		if (url.indexOf("reloadfwallini") > -1) {
+			this.reloadIni();
+			response.getWriter().print("fwall reloaded.");
 			return;
 		}
 		//-----------------------------------
@@ -285,12 +300,28 @@ public class AppFilter implements Filter {
 //		return;
 		chain.doFilter(request, response);
 	}
+	
+	private static String iniPath;
+	
+	private void reloadIni(){
+		if(fwall.readIni(iniPath)){
+			fwall.init();
+		}
+		
+	}
+	
+	public static FWall getFwall(){
+		return fwall;
+	}
 
 	/**
 	 * @see Filter#init(FilterConfig)
 	 */
 	public void init(FilterConfig fConfig) throws ServletException {
 		//处理FWall线程并初始化
+		iniPath = fConfig.getServletContext().getRealPath("/")+"WEB-INF/fw_ini.json";
+		//System.out.println(iniPath);
+		fwall = new FWall(iniPath);
 		Thread fw = new Thread(fwall,"fwall");
 		fw.start();
 	}

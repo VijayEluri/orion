@@ -111,6 +111,10 @@ public class FWService implements Runnable {
 			log.error("getDB error", e);
 			mongo = null;
 			return false;
+		}catch (Exception e) {
+			mongo = null;
+			log.error("getDB error", e);
+			return false;
 		}
 		return false;
 	}
@@ -323,12 +327,16 @@ public class FWService implements Runnable {
 	 */
 	private final void uploadFile(FTPClient client,File file) throws Exception{
 		try {
+			
 			if (file.isDirectory()) {
+				String remotePath = client.currentDirectory()+"/"+file.getName();
+				try {
+					client.changeDirectory(remotePath);
+				} catch (Exception e) {
+					client.createDirectory(remotePath);
+					client.changeDirectory(remotePath);
+				}
 				log.info("remotePath----:"+client.currentDirectory());
-//				String remotePath = client.currentDirectory()+"/"+file.getName();
-//				log.info("remotePath:"+remotePath);
-//				client.createDirectory(remotePath);
-//				client.changeDirectory(remotePath);
 				String[] children  = file.list();
 				for (int i = 0; i < children .length; i++) {
 					uploadFile(client,new File(file, children[i]));
@@ -361,8 +369,8 @@ public class FWService implements Runnable {
 				log.info("synftp:"+client.getHost()+" dir:"+cdir+" tmpPath:"+tmpPath);
 				uploadFile(client,new File(tmpPath));	
 				//上传源图
-				cdir = ftps[i].get("src")+"/"+now();
-				client.createDirectory(cdir);
+				cdir = ftps[i].get("src");//+"/"+now();
+//				client.createDirectory(cdir);
 				client.changeDirectory(cdir);
 				log.info("synftp-src:"+client.getHost()+" srcdir:"+cdir+" srcPath:"+srcPath);
 				uploadFile(client,new File(srcPath));

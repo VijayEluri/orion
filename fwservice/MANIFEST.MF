@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Sealed: true
+Main-Class: com.k99k.ij.resize.FWService
+Class-Path: ./ ./mongo-2.1.jar ./ij.jar ./log4j-1.2.13.jar ./stringtree-json-2.0.9.jar ./ftp4j-1.5.1.jar
