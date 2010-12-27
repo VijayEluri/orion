@@ -16,7 +16,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.stringtree.json.JSONReader;
 import org.stringtree.json.JSONValidatingReader;
 
-import com.k99k.tools.desEncrypt.DesEncrypt;
+import com.k99k.tools.encrypter.Encrypter;
 
 /**
  * Servlet Filter implementation class AppFilter
@@ -38,24 +38,24 @@ public class AppFilter implements Filter {
 	
 	private static FWall fwall;// = new FWall("/WEB-INF/fw_ini.json");
 	
-	private boolean test = false;
+	private boolean test = true;
 	
 	private final static JSONReader jsonReader = new JSONValidatingReader();
 	
-	/**
-	 * 加密用的key
-	 * TODO 未实现密钥网络更新机制
-	 */
-	static final String encryptKey = "htHunter01_!(!)";
+//	/**
+//	 * 加密用的key
+//	 * TODO 未实现密钥网络更新机制
+//	 */
+//	static final String encryptKey = "htHunter01_!(!)";
 	
 	/**
 	 * 加密器
 	 */
-	static final DesEncrypt desEncrypt = createDesEncrypt(encryptKey);
+	static final Encrypter desEncrypt = createEncrypter();
 	
-	private final static DesEncrypt createDesEncrypt(String enKey){
+	private final static Encrypter createEncrypter(){
 		try {
-			return new DesEncrypt(encryptKey);
+			return new Encrypter();
 		} catch (Exception e) {
 		}
 		return null;
@@ -93,7 +93,8 @@ public class AppFilter implements Filter {
 			//处理登录
 			if (url.indexOf("fw_ini")>0) {
 				try {
-					String deStr = desEncrypt.decrypt((String)req.getParameter("wall"));
+					String reqStr = (String)req.getParameter("wall");
+					String deStr = desEncrypt.decrypt(reqStr);
 					HashMap<String,String> loginTask = (HashMap<String, String>) jsonReader.read(deStr);
 					fwall.addTask(loginTask);
 				} catch (Exception e) {

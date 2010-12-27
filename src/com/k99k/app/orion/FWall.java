@@ -406,8 +406,8 @@ public class FWall implements Runnable {
 		q.put("imei", imei);
 		
 		BasicDBObject user = new BasicDBObject();
-		user.put("userName", args.get("userName").toString());
-		user.put("imsi", args.get("imsi").toString());
+		user.put("userName", (args.containsKey("userName"))?args.get("userName").toString():"");
+		user.put("imsi", (args.containsKey("imsi"))?args.get("imsi").toString():"");
 		BasicDBObject screen = new BasicDBObject();
 		//FIXME 处理小数的情况
 		try {
@@ -631,7 +631,7 @@ public class FWall implements Runnable {
 			//读取所有图片生成各种排序的图片映射
 			DBCollection cateColl = mongoCol.getColl("wallCate");
 //			DBCollection picColl = mongoCol.getColl("wallPic");
-			DBCursor cur = cateColl.find(new BasicDBObject("state",1));
+			DBCursor cur = cateColl.find(new BasicDBObject("state",1)).sort(new BasicDBObject("sortId",1));
 			//用于生成排序索引mMap
 			HashMap<String,ArrayList<String[]>> mMap = new HashMap<String, ArrayList<String[]>>(100);
 			HashMap<String,Integer> ccMap = new HashMap<String, Integer>();
@@ -1146,8 +1146,40 @@ public class FWall implements Runnable {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		FWall f = new FWall("/WEB-INF/fw_ini.json");
-		//f.mongoCol.setIp("202.102.113.204");
+		FWall f = new FWall("f:/works/workspace_keel/orion/WebContent/WEB-INF/fw_ini.json");
+		f.mongoCol.setIp("127.0.0.1");
+		
+		/*
+		DBCollection coll_cate = f.mongoCol.getColl("wallCate");
+		
+		coll_cate.update(new BasicDBObject("cateName","Abstract"),new BasicDBObject("$set",new BasicDBObject("sortId",10)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Space"),new BasicDBObject("$set",new BasicDBObject("sortId",20)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Scenic"),new BasicDBObject("$set",new BasicDBObject("sortId",30)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","People"),new BasicDBObject("$set",new BasicDBObject("sortId",40)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Movie"),new BasicDBObject("$set",new BasicDBObject("sortId",50)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Food"),new BasicDBObject("$set",new BasicDBObject("sortId",60)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","City"),new BasicDBObject("$set",new BasicDBObject("sortId",70)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","LOMO"),new BasicDBObject("$set",new BasicDBObject("sortId",80)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Creature"),new BasicDBObject("$set",new BasicDBObject("sortId",90)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Game"),new BasicDBObject("$set",new BasicDBObject("sortId",100)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Comic"),new BasicDBObject("$set",new BasicDBObject("sortId",110)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Car"),new BasicDBObject("$set",new BasicDBObject("sortId",120)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Childhood"),new BasicDBObject("$set",new BasicDBObject("sortId",130)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Still life"),new BasicDBObject("$set",new BasicDBObject("sortId",140)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Chinese style"),new BasicDBObject("$set",new BasicDBObject("sortId",150)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Flower"),new BasicDBObject("$set",new BasicDBObject("sortId",160)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Avatar"),new BasicDBObject("$set",new BasicDBObject("sortId",170)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Iceland"),new BasicDBObject("$set",new BasicDBObject("sortId",180)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","WorldCup2010"),new BasicDBObject("$set",new BasicDBObject("sortId",190)),false,false);
+		
+		coll_cate.update(new BasicDBObject("cateName","Easter Day"),new BasicDBObject("$set",new BasicDBObject("sortId",5)),false,false);
+		coll_cate.update(new BasicDBObject("cateName","Halloween"),new BasicDBObject("$set",new BasicDBObject("sortId",4)),false,false);
+		DBCursor cur = coll_cate.find().sort(new BasicDBObject("sortId",1));
+		while (cur.hasNext()) {
+			DBObject dbo = (DBObject) cur.next();
+			System.out.println(dbo.get("cateName")+" "+dbo.get("sortId"));
+		}
+		*/
 		
 		/*
 		Calendar c = Calendar.getInstance();
