@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -65,7 +66,7 @@ public class FWall implements Runnable {
 	private HashMap<String,Integer> cateCountMap = new HashMap<String, Integer>(100);
 	
 	/**
-	 * picId和cate对应的ObjectID缓存,key为cate#picId,value为ObjectId
+	 * ObjectID图片缓存,key为ObjectId,value为WallPic
 	 */
 	private HashMap<String,WallPic> objIdMap = new HashMap<String, WallPic>(5000);
 	
@@ -165,6 +166,43 @@ public class FWall implements Runnable {
 	}
 	
 
+	/**
+	 * 由pic_oid获取真正的图片路径 
+	 * @param pic_oid
+	 * @return
+	 */
+	public final String[] getPicPathByOid(String pic_oid){
+		int picType = 0;
+		String oid = "";
+		//是否大图
+		if (pic_oid.startsWith("b_")) {
+			//分辨率
+			if (pic_oid.endsWith("_l")) {
+				picType = 3;
+				oid = pic_oid.substring(3,pic_oid.length()-2);
+			}else{
+				picType = 2;
+				oid = pic_oid.substring(3);
+			}
+		}else{
+			//分辨率
+			if (pic_oid.endsWith("_l")) {
+				picType = 1;
+				oid = pic_oid.substring(1,pic_oid.length()-2);
+			}else{
+				picType = 0;
+				oid = pic_oid.substring(1);
+			}
+		}
+		WallPic w = objIdMap.get(oid);
+		if (w != null) {
+//			String[] arr =  this.picCateMap.get(w.getCate()+"#time").get(w.getPicId());
+//			return arr[picType+1];
+			String[] arr =  new String[]{oid,w.getPicPath()[picType]};
+			return arr;
+		}
+		return null;
+	}
 	
 	/**
 	 * 转到真正的图片路径,如失败则返回空String
@@ -173,7 +211,7 @@ public class FWall implements Runnable {
 	 * @param num 图片序号
 	 * @param picType 图片所取对应图片
 	 * @param isAsc 是否顺序,0为顺序，非0为倒序
-	 * @return String
+	 * @return String[]
 	 */
 	public final String[] toRealPath(String cate,String sortBy,int num,int picType,int isAsc){
 		int picNum = num;
@@ -203,6 +241,54 @@ public class FWall implements Runnable {
 	 * @return 数组形式的json String 
 	 */
 	public String getStarIndexByUser(String imei){
+		if (!checkIMEI(imei)) {
+			return "";
+		}
+		String starJson = "";
+		DBCollection coll = mongoCol.getColl("wallUser");
+		try {
+			DBCursor cur = coll.find(new BasicDBObject("imei",imei));
+			if (cur.hasNext()) {
+				DBObject o = cur.next();
+				if (o.containsField("star")) {
+					BasicBSONList list = (BasicBSONList)o.get("star");
+					StringBuilder sb = new StringBuilder();
+					sb.append("[");
+					int size = list.size();
+					for (int i = 0; i < size; i++) {
+						sb.append("\"").append(list.get(i)).append("\",");
+					}
+//					for (int i = 0; i < size; i++) {
+//						WallPic w = objIdMap.get(list.get(i));
+//						if (w == null) {
+//							System.out.println("===========188 ERROR=======:"+list.get(i));
+//							continue;
+//						}
+//						//FIXME 188行，报java.lang.NullPointerException
+//						String catePicIdPath = w.getCate()+"#"+w.getPicId();
+//						sb.append("\"").append(catePicIdPath).append("\",");
+//					}
+					if (sb.charAt(sb.length()-1) == ',') {
+						sb.delete(sb.length()-1,sb.length());
+					}
+					sb.append("]");
+					starJson = sb.toString();//((BasicBSONList)o.get("star")).toString();
+				}
+			}
+		} catch (Exception e) {
+			System.out.println("------"+new Date());
+			e.printStackTrace();
+			return "";
+		}
+		return starJson;
+	}
+	
+	/**
+	 * 获取某用户的所有star图片列表
+	 * @param imei 
+	 * @return 数组形式的json String 
+	 */
+	public String getStarIndexByUserOld(String imei){
 		if (!checkIMEI(imei)) {
 			return "";
 		}
@@ -265,15 +351,27 @@ public class FWall implements Runnable {
 			//更新wallUser表
 			DBCollection coll = mongoCol.getColl("wallUser");
 			BasicDBObject q = new BasicDBObject("imei",imei);
-			BasicDBObject set = new BasicDBObject("$push",new BasicDBObject("star",picOid));
-			coll.update(q, set);
+			DBCursor cur  = coll.find(q);
+			if (cur.hasNext()) {
+				DBObject user = cur.next();
+				BasicBSONList list = (BasicBSONList) user.get("star");
+				if (list.contains(picOid)) {
+					return true;
+				}
+				
+				BasicDBObject set = new BasicDBObject("$push",new BasicDBObject("star",picOid));
+				coll.update(q, set);
+			}
+			
+			
+			
 			
 			//更新wallPic的加星数
 //			ObjectId oid = new ObjectId((String)objIdMap.get(cate+"#"+picId));
 //			if (oid!=null) {
 				coll = mongoCol.getColl("wallPic");
 				q = new BasicDBObject("_id",new ObjectId(picOid));
-				set = new BasicDBObject("$push",new BasicDBObject("starInfo",new BasicDBObject("imei",imei).append("msg", "").append("good", 0).append("bad", 0)));
+				BasicDBObject set = new BasicDBObject("$push",new BasicDBObject("starInfo",new BasicDBObject("imei",imei).append("msg", "").append("good", 0).append("bad", 0)));
 				set.append("$inc", new BasicDBObject("stars",1));
 				coll.update(q, set);
 //			}else{
@@ -411,7 +509,7 @@ public class FWall implements Runnable {
 		BasicDBObject screen = new BasicDBObject();
 		//FIXME 处理小数的情况
 		try {
-			screen.append("width",Integer.parseInt(args.get("width").toString())).append("height", Integer.parseInt(args.get("height").toString())).append("dpi", Integer.parseInt(args.get("dpi").toString()));
+			screen.append("width",Integer.parseInt(args.get("width").toString())).append("height", Integer.parseInt(args.get("height").toString())).append("dpi", args.get("dpi").toString());
 		} catch (Exception e) {
 			System.out.println("---------");
 			System.out.println("width:"+args.get("width").toString());
@@ -1004,20 +1102,9 @@ public class FWall implements Runnable {
 				while (cur.hasNext()) {
 					DBObject dbo = (DBObject) cur.next();
 					ObjectId oid = (ObjectId) dbo.get("_id");
-//					//更新类别中的max
-//					if (cateCountMap.get(cate) < picId) {
-//						cateCountMap.put(cate, picId);
-//						coll_cate.update(new BasicDBObject("catePre",cate), new BasicDBObject("$set",new BasicDBObject("max",picId)));
-	//
-//					}
 					//更新topId为1
 					coll_pic.update(new BasicDBObject("_id",oid), new BasicDBObject("$set",new BasicDBObject("state",1).append("addTime", new Date())));
-//					//准备"最新"的更新数据
-//					newPic4Group.add(cate+"#"+picId);
-//					if (i%4 == 3) {
-//						pics.add(0,newPic4Group);
-//						newPic4Group = new BasicBSONList();
-//					}
+					System.out.println("Update today pic:"+dbo.get("picName")+" id:"+oid);
 					i++;
 				}
 				//有更新
@@ -1147,7 +1234,7 @@ public class FWall implements Runnable {
 	 */
 	public static void main(String[] args) {
 		FWall f = new FWall("f:/works/workspace_keel/orion/WebContent/WEB-INF/fw_ini.json");
-		f.mongoCol.setIp("127.0.0.1");
+		f.mongoCol.setIp("202.102.113.204");
 		
 		/*
 		DBCollection coll_cate = f.mongoCol.getColl("wallCate");
@@ -1224,20 +1311,20 @@ public class FWall implements Runnable {
 //		o.put("nextUpdateTime", c.getTime());
 //		coll.save(o);
 //设置时间		
-//		DBCollection coll = mongoCol.getColl("wallDay");
-//		DBCursor cur = coll.find();
-//		if (cur.hasNext()) {
-//			DBObject o = cur.next();
-//			Date d = (Date)o.get("nextUpdateTime");
-//			Calendar c = Calendar.getInstance();
-//			c.set(Calendar.HOUR_OF_DAY, 12);
-//			c.set(Calendar.MINUTE, 00);
-//			//c.add(Calendar.DATE, 1);
-//			//o.put("nextUpdateTime", c.getTime());
-//			o.put("nextUpdateTime", c.getTime());
-//			o.put("lastUpdate",new Date());
-//			coll.update(new BasicDBObject("id",1), o);
-//		}
+		DBCollection coll = f.mongoCol.getColl("wallDay");
+		DBCursor cur = coll.find();
+		if (cur.hasNext()) {
+			DBObject o = cur.next();
+			Date d = (Date)o.get("nextUpdateTime");
+			Calendar c = Calendar.getInstance();
+			c.set(Calendar.HOUR_OF_DAY, 12);
+			c.set(Calendar.MINUTE, 00);
+			//c.add(Calendar.DATE, 1);
+			//o.put("nextUpdateTime", c.getTime());
+			o.put("nextUpdateTime", c.getTime());
+			o.put("lastUpdate",new Date());
+			coll.update(new BasicDBObject("id",1), o);
+		}
 //----------------------
 		
 //		System.out.println(f.getWallconfig());
