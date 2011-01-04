@@ -319,34 +319,74 @@ public class FWService implements Runnable {
     } 
 	
 	
+//	/**
+//	 * 上传文件夹及下面的所有文件
+//	 * @param client FTPClient
+//	 * @param file 文件夹
+//	 * @throws Exception
+//	 */
+//	private final void uploadFile(FTPClient client,File file,boolean includeDir) throws Exception{
+//		try {
+//			
+//			if (file.isDirectory()) {
+//				if (includeDir) {
+//					String remotePath = client.currentDirectory()+"/"+file.getName();
+//					try {
+//						client.changeDirectory(remotePath);
+//					} catch (Exception e) {
+//						client.createDirectory(remotePath);
+//						client.changeDirectory(remotePath);
+//					}
+//					includeDir = true;
+//				}
+//				log.info("remotePath----:"+client.currentDirectory());
+//				String[] children  = file.list();
+//				for (int i = 0; i < children .length; i++) {
+//					uploadFile(client,new File(file, children[i]),true);
+//				}
+//			}else{
+//				client.upload(file);
+//				log.info("uploadFile:"+file.getName());
+//			}
+//		} catch (Exception e) {
+//			log.error("uploadFile error:", e);
+//		}
+//		
+//	}
+	
 	/**
 	 * 上传文件夹及下面的所有文件
 	 * @param client FTPClient
-	 * @param file 文件夹
+	 * @param srcDir 本地文件夹
+	 * @param targetDir 远程目标文件夹
 	 * @throws Exception
 	 */
-	private final void uploadFile(FTPClient client,File file,boolean includeDir) throws Exception{
+	private final void uploadFile(FTPClient client,String srcDir,String targetDir) throws Exception{
 		try {
 			
-			if (file.isDirectory()) {
-				if (includeDir) {
-					String remotePath = client.currentDirectory()+"/"+file.getName();
-					try {
-						client.changeDirectory(remotePath);
-					} catch (Exception e) {
-						client.createDirectory(remotePath);
-						client.changeDirectory(remotePath);
-					}
-					includeDir = true;
+			//移动至目标文件夹,若无则创建
+			try {
+				client.changeDirectory(targetDir);
+			} catch (Exception e) {
+				client.createDirectory(targetDir);
+				client.changeDirectory(targetDir);
+			}
+			
+			log.info("remotePath----:"+client.currentDirectory());
+			
+			File dirf = new File(srcDir);
+			File[] fileList  = dirf.listFiles();
+			for (int i = 0; i < fileList.length; i++) {
+				if (fileList[i].isFile()) {
+					//上传文件
+					client.upload(fileList[i]);
+					log.info(fileList[i].getName());
+				}else if(fileList[i].isDirectory()){
+					//上传文件夹
+					String children = srcDir+"/"+fileList[i].getName();
+					String remote = targetDir+"/"+fileList[i].getName();
+					uploadFile(client,children,remote);
 				}
-				log.info("remotePath----:"+client.currentDirectory());
-				String[] children  = file.list();
-				for (int i = 0; i < children .length; i++) {
-					uploadFile(client,new File(file, children[i]),true);
-				}
-			}else{
-				client.upload(file);
-				log.info("uploadFile:"+file.getName());
 			}
 		} catch (Exception e) {
 			log.error("uploadFile error:", e);
@@ -364,19 +404,13 @@ public class FWService implements Runnable {
 				client.connect(ftps[i].get("ip"),Integer.parseInt(ftps[i].get("port")));
 				client.login(ftps[i].get("user"),ftps[i].get("pwd"));
 				String cdir = ftps[i].get("dir");
-				client.changeDirectory(cdir);
-				if (!client.currentDirectory().equals(cdir)) {
-					client.createDirectory(cdir);
-					client.changeDirectory(cdir);
-				}
+				//上传生成图
 				log.info("synftp:"+client.getHost()+" dir:"+cdir+" tmpPath:"+tmpPath);
-				uploadFile(client,new File(tmpPath),false);	
+				uploadFile(client,tmpPath,cdir);	
 				//上传源图
 				cdir = ftps[i].get("src");//+"/"+now();
-//				client.createDirectory(cdir);
-				client.changeDirectory(cdir);
 				log.info("synftp-src:"+client.getHost()+" srcdir:"+cdir+" srcPath:"+srcPath);
-				uploadFile(client,new File(srcPath),true);
+				uploadFile(client,srcPath,cdir+"/"+srcPath.substring(srcPath.lastIndexOf("/")+1));
 				client.disconnect(true);
 			} catch (Exception e) {
 				log.error("synftps error!", e);
