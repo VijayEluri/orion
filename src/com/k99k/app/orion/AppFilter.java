@@ -134,10 +134,10 @@ public class AppFilter implements Filter {
 //				
 //			}
 			//确定pic_oid和imei
-			if (req.getParameter("pic_oid")!=null) {
+			if (req.getParameter("pic_oid")!=null && req.getParameter("pic_oid").length()>2) {
 				pic_oid = req.getParameter("pic_oid").toString();
 			}
-			if (req.getParameter("type")!=null) {
+			if (req.getParameter("type")!=null&& req.getParameter("type").length()>0) {
 				type = req.getParameter("type").toString();
 			}
 			String reqStr = (String)req.getParameter("wall");
@@ -241,7 +241,7 @@ public class AppFilter implements Filter {
 		//处理增加下载量请求
 		if (url.indexOf("adddown") >0) {
 			//String pic_oid = req.getHeader("pic_oid");
-			if (imei.equals("")) {
+			if (imei.equals("") || pic_oid.equals("")) {
 				//非手机请求,不处理
 				response.getWriter().print("");
 				return;
@@ -261,7 +261,7 @@ public class AppFilter implements Filter {
 			//String type = req.getHeader("type");
 			//pic_oid = req.getHeader("pic_oid");
 			//System.out.println("type:"+type+" pic_oid:"+pic_oid+" imei:"+req.getHeader("imei"));
-			if (imei.equals("")) {
+			if (imei.equals("")|| pic_oid.equals("")) {
 				//非手机请求,不处理
 				response.getWriter().print("");
 				return;

@@ -23,6 +23,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
+import com.mongodb.MongoException;
 import com.mongodb.util.JSON;
 
 /**
@@ -306,7 +307,7 @@ public class FWall implements Runnable {
 					for (int i = 0; i < size; i++) {
 						WallPic w = objIdMap.get(list.get(i));
 						if (w == null) {
-							System.out.println("===========188 ERROR=======:"+list.get(i));
+							//System.out.println("===========188 ERROR=======:"+list.get(i));
 							continue;
 						}
 						//FIXME 188行，报java.lang.NullPointerException
@@ -330,6 +331,9 @@ public class FWall implements Runnable {
 	
 	public final String getCatePicId(String pic_oid){
 		WallPic w = this.objIdMap.get(pic_oid);
+		if (w == null) {
+			return "";
+		}
 		return w.getCate()+"#"+w.getPicId();
 	}
 	
@@ -490,6 +494,7 @@ public class FWall implements Runnable {
 	 * @return String json化的配置文件
 	 */
 	public final String login(Map args){
+		
 		//处理用户信息
 		//imei作为查询条件
 		if (args.get("imei") == null ) {
@@ -500,64 +505,68 @@ public class FWall implements Runnable {
 		if (imei.length() < 5) {
 			return this.wallconfig;
 		}
-		BasicDBObject q = new BasicDBObject();
-		q.put("imei", imei);
-		
-		BasicDBObject user = new BasicDBObject();
-		user.put("userName", (args.containsKey("userName"))?args.get("userName").toString():"");
-		user.put("imsi", (args.containsKey("imsi"))?args.get("imsi").toString():"");
-		BasicDBObject screen = new BasicDBObject();
-		//FIXME 处理小数的情况
 		try {
-			screen.append("width",Integer.parseInt(args.get("width").toString())).append("height", Integer.parseInt(args.get("height").toString())).append("dpi", args.get("dpi").toString());
+			BasicDBObject q = new BasicDBObject();
+			q.put("imei", imei);
+			
+			BasicDBObject user = new BasicDBObject();
+			user.put("userName", (args.containsKey("userName"))?args.get("userName").toString():"");
+			user.put("imsi", (args.containsKey("imsi"))?args.get("imsi").toString():"");
+			BasicDBObject screen = new BasicDBObject();
+			//FIXME 处理小数的情况
+			try {
+				screen.append("width",Integer.parseInt(args.get("width").toString())).append("height", Integer.parseInt(args.get("height").toString())).append("dpi", args.get("dpi").toString());
+			} catch (Exception e) {
+				System.out.println("---------");
+				System.out.println("width:"+args.get("width").toString());
+				System.out.println("height:"+args.get("height").toString());
+				System.out.println("dpi:"+args.get("dpi").toString());
+				System.out.println("---------");
+				e.printStackTrace();
+			}
+			user.put("screen", screen);
+			BasicDBObject handset = new BasicDBObject();
+			handset.append("display", args.get("display").toString())
+			.append("board", args.get("board").toString())
+			.append("brand", args.get("brand").toString())
+			.append("fingerprint", args.get("fingerprint").toString())
+			.append("device", args.get("device").toString())
+			.append("host", args.get("host").toString())
+			.append("id", args.get("id").toString())
+			.append("model", args.get("model").toString())
+			.append("product", args.get("product").toString())
+			.append("tags", args.get("tags").toString())
+			.append("type", args.get("type").toString())
+			.append("user", args.get("user").toString())
+			.append("user-agent", args.get("user-agent").toString());
+			user.put("handset", handset);
+			
+			user.put("appVersion", args.get("appVersion").toString());
+			user.put("lastLogin", new Date());
+			user.put("lang", args.get("lang").toString());
+			user.put("ip", args.get("ip").toString());
+			
+			BasicDBObject set = new BasicDBObject();
+			DBCollection coll = mongoCol.getColl("wallUser");
+			DBCursor cur = coll.find(q);
+			if (cur.hasNext()) {
+				//老用户登录
+				set.put("$inc",new BasicDBObject().append("loginTimes", 1));
+			}else{
+				//新用户注册
+				user.put("regTime", new Date());
+				user.put("loginTimes", 1);
+				user.put("state", 1);
+				user.put("info", "");
+				user.put("star", new BasicBSONList());
+				user.put("imei", imei);
+			}
+			
+			set.put("$set", user);
+			coll.update(q, set, true, false);
 		} catch (Exception e) {
-			System.out.println("---------");
-			System.out.println("width:"+args.get("width").toString());
-			System.out.println("height:"+args.get("height").toString());
-			System.out.println("dpi:"+args.get("dpi").toString());
-			System.out.println("---------");
 			e.printStackTrace();
 		}
-		user.put("screen", screen);
-		BasicDBObject handset = new BasicDBObject();
-		handset.append("display", args.get("display").toString())
-		.append("board", args.get("board").toString())
-		.append("brand", args.get("brand").toString())
-		.append("fingerprint", args.get("fingerprint").toString())
-		.append("device", args.get("device").toString())
-		.append("host", args.get("host").toString())
-		.append("id", args.get("id").toString())
-		.append("model", args.get("model").toString())
-		.append("product", args.get("product").toString())
-		.append("tags", args.get("tags").toString())
-		.append("type", args.get("type").toString())
-		.append("user", args.get("user").toString())
-		.append("user-agent", args.get("user-agent").toString());
-		user.put("handset", handset);
-		
-		user.put("appVersion", args.get("appVersion").toString());
-		user.put("lastLogin", new Date());
-		user.put("lang", args.get("lang").toString());
-		user.put("ip", args.get("ip").toString());
-		
-		BasicDBObject set = new BasicDBObject();
-		DBCollection coll = mongoCol.getColl("wallUser");
-		DBCursor cur = coll.find(q);
-		if (cur.hasNext()) {
-			//老用户登录
-			set.put("$inc",new BasicDBObject().append("loginTimes", 1));
-		}else{
-			//新用户注册
-			user.put("regTime", new Date());
-			user.put("loginTimes", 1);
-			user.put("state", 1);
-			user.put("info", "");
-			user.put("star", new BasicBSONList());
-			user.put("imei", imei);
-		}
-		
-		set.put("$set", user);
-		coll.update(q, set, true, false);
 		return this.wallconfig;
 	}
 	
@@ -1087,84 +1096,90 @@ public class FWall implements Runnable {
 	 * @throws InterruptedException 
 	 */
 	public void updateByDay(){
-		Date now  = new Date();
-		if (now.after(this.nextUpdateTime)) {
-			//真实更新的图片数
-			int i = 0;
-			boolean needInit = false;
-			//当更新数大于0时进行日更新操作
-			if (this.newPicsOneDay > 0) {
-				DBCollection coll_pic = mongoCol.getColl("wallPic");
+		try {
+			Date now  = new Date();
+			if (now.after(this.nextUpdateTime)) {
 				
-				//将state为2的新图片按类别排序，再按picId顺序排，避免更新乱掉
-				DBCursor cur = coll_pic.find(new BasicDBObject("state",2)).sort((new BasicDBObject("cate",1)).append("picId",1)).limit(this.newPicsOneDay);
-				
-				while (cur.hasNext()) {
-					DBObject dbo = (DBObject) cur.next();
-					ObjectId oid = (ObjectId) dbo.get("_id");
-					//更新topId为1
-					coll_pic.update(new BasicDBObject("_id",oid), new BasicDBObject("$set",new BasicDBObject("state",1).append("addTime", new Date())));
-					System.out.println("Update today pic:"+dbo.get("picName")+" id:"+oid);
-					i++;
-				}
-				//有更新
-				if (i > 0) {
+				System.out.println("---- updateByDay running...");
+				//真实更新的图片数
+				int i = 0;
+				boolean needInit = false;
+				//当更新数大于0时进行日更新操作
+				if (this.newPicsOneDay > 0) {
+					DBCollection coll_pic = mongoCol.getColl("wallPic");
+					
+					//将state为2的新图片按类别排序，再按picId顺序排，避免更新乱掉
+					DBCursor cur = coll_pic.find(new BasicDBObject("state",2)).sort((new BasicDBObject("cate",1)).append("picId",1)).limit(this.newPicsOneDay);
+					
+					while (cur.hasNext()) {
+						DBObject dbo = (DBObject) cur.next();
+						ObjectId oid = (ObjectId) dbo.get("_id");
+						//更新topId为1
+						coll_pic.update(new BasicDBObject("_id",oid), new BasicDBObject("$set",new BasicDBObject("state",1).append("addTime", new Date())));
+						System.out.println("Update today pic:"+dbo.get("picName")+" id:"+oid);
+						i++;
+					}
+					//有更新
+					if (i > 0) {
 //					this.wallconfig = config.toString();
-					System.out.println("----Update by day pics:"+i);
-					//重新初始化
-					needInit = true;
-					//this.init();
-					//实始化会更新this.lastUpdate为数据库中的数据
-					this.lastUpdate = new Date();
-				}		
-				
-			}else{
-				//延迟2分钟再等待主服务器数据更新后再更新数据 --通过配置文件中指定更新时间才实现延迟
+						System.out.println("----Update by day pics:"+i);
+						//重新初始化
+						needInit = true;
+						//this.init();
+						//实始化会更新this.lastUpdate为数据库中的数据
+						this.lastUpdate = new Date();
+					}		
+					
+				}else{
+					//延迟2分钟再等待主服务器数据更新后再更新数据 --通过配置文件中指定更新时间才实现延迟
 //				try {
 //					Thread.sleep(1000*60*2);
 //				} catch (InterruptedException e) {
 //					return;
 //				}
-				//是否数据有更新，如有则重新初始化
-				DBCollection coll = mongoCol.getColl("wallDay");
-				DBCursor cur = coll.find(new BasicDBObject("id",1));
-				if (cur.hasNext()) {
-					DBObject dbo = (DBObject) cur.next();
-					Date lastUpdateT = (Date) dbo.get("lastUpdate");
-					//如果本服务器的lastUpdate时间比数据库里的更新时间早，则进行init()
-					if (this.lastUpdate != null && this.lastUpdate.before(lastUpdateT)) {
-						this.lastUpdate = lastUpdateT;
-						//重新初始化
-						needInit = true;
-					}else{
-						this.lastUpdate = lastUpdateT;
+					//是否数据有更新，如有则重新初始化
+					DBCollection coll = mongoCol.getColl("wallDay");
+					DBCursor cur = coll.find(new BasicDBObject("id",1));
+					if (cur.hasNext()) {
+						DBObject dbo = (DBObject) cur.next();
+						Date lastUpdateT = (Date) dbo.get("lastUpdate");
+						//如果本服务器的lastUpdate时间比数据库里的更新时间早，则进行init()
+						if (this.lastUpdate != null && this.lastUpdate.before(lastUpdateT)) {
+							this.lastUpdate = lastUpdateT;
+							//重新初始化
+							needInit = true;
+						}else{
+							this.lastUpdate = lastUpdateT;
+						}
+						System.out.println("----lastUpdate:"+this.lastUpdate);
 					}
-					System.out.println("----lastUpdate:"+this.lastUpdate);
 				}
-			}
 
-			//更新下次更新时间,当newPicsOneDay不为0时
-			Calendar c = Calendar.getInstance();
-			c.setTime(nextUpdateTime);
-			c.set(Calendar.HOUR_OF_DAY, 12);
-			c.set(Calendar.MINUTE, 00);
-			c.add(Calendar.DATE, 1);
-			this.nextUpdateTime = c.getTime();
-			if (this.newPicsOneDay > 0) {
-				//用于更新wallDay的数据
-				BasicDBObject setData = new BasicDBObject("nextUpdateTime",this.nextUpdateTime);
-				if (i > 0 ) {
-					//本次有更新时
-					setData.append("lastUpdate", this.lastUpdate);
+				//更新下次更新时间,当newPicsOneDay不为0时
+				Calendar c = Calendar.getInstance();
+				c.setTime(nextUpdateTime);
+				c.set(Calendar.HOUR_OF_DAY, 12);
+				c.set(Calendar.MINUTE, 00);
+				c.add(Calendar.DATE, 1);
+				this.nextUpdateTime = c.getTime();
+				if (this.newPicsOneDay > 0) {
+					//用于更新wallDay的数据
+					BasicDBObject setData = new BasicDBObject("nextUpdateTime",this.nextUpdateTime);
+					if (i > 0 ) {
+						//本次有更新时
+						setData.append("lastUpdate", this.lastUpdate);
+					}
+					DBCollection coll = mongoCol.getColl("wallDay");
+					coll.update(new BasicDBObject("id",1), new BasicDBObject("$set",setData));
 				}
-				DBCollection coll = mongoCol.getColl("wallDay");
-				coll.update(new BasicDBObject("id",1), new BasicDBObject("$set",setData));
+				System.out.println("----next updateByDay:"+this.nextUpdateTime+ " lastUpdate:"+this.lastUpdate);
+				//最后重新初始化
+				if (needInit) {
+					this.init();
+				}
 			}
-			System.out.println("----next updateByDay:"+this.nextUpdateTime+ " lastUpdate:"+this.lastUpdate);
-			//最后重新初始化
-			if (needInit) {
-				this.init();
-			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 
