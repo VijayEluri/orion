@@ -144,7 +144,7 @@ public class AppFilter implements Filter {
 			String deStr = "";
 			try {
 				deStr = desEncrypt.decrypt(reqStr);
-				String s = ((HashMap<String,String>)jsonReader.read(deStr)).get("imei").toString();
+				String s = ((HashMap<String,Object>)jsonReader.read(deStr)).get("imei").toString();
 				if (s != null && s.length() >5) {
 					imei = s;
 				}
@@ -241,7 +241,7 @@ public class AppFilter implements Filter {
 		//处理增加下载量请求
 		if (url.indexOf("adddown") >0) {
 			//String pic_oid = req.getHeader("pic_oid");
-			if (imei.equals("") || pic_oid.equals("")) {
+			if (imei.equals("") || pic_oid.equals("") || pic_oid.equals("null")) {
 				//非手机请求,不处理
 				response.getWriter().print("");
 				return;

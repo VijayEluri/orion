@@ -526,19 +526,19 @@ public class FWall implements Runnable {
 			}
 			user.put("screen", screen);
 			BasicDBObject handset = new BasicDBObject();
-			handset.append("display", args.get("display").toString())
-			.append("board", args.get("board").toString())
-			.append("brand", args.get("brand").toString())
-			.append("fingerprint", args.get("fingerprint").toString())
-			.append("device", args.get("device").toString())
-			.append("host", args.get("host").toString())
-			.append("id", args.get("id").toString())
-			.append("model", args.get("model").toString())
-			.append("product", args.get("product").toString())
-			.append("tags", args.get("tags").toString())
-			.append("type", args.get("type").toString())
-			.append("user", args.get("user").toString())
-			.append("user-agent", args.get("user-agent").toString());
+			handset.append("display", (args.get("display")==null)?"":args.get("display").toString())
+			.append("board", (args.get("board")==null)?"":args.get("board").toString())
+			.append("brand", (args.get("brand")==null)?"":args.get("brand").toString())
+			.append("fingerprint", (args.get("fingerprint")==null)?"":args.get("fingerprint").toString())
+			.append("device", (args.get("device")==null)?"":args.get("device").toString())
+			.append("host", (args.get("host")==null)?"":args.get("host").toString())
+			.append("id",(args.get("id")==null)?"": args.get("id").toString())
+			.append("model", (args.get("model")==null)?"":args.get("model").toString())
+			.append("product", (args.get("product")==null)?"":args.get("product").toString())
+			.append("tags", (args.get("tags")==null)?"":args.get("tags").toString())
+			.append("type", (args.get("type")==null)?"":args.get("type").toString())
+			.append("user", (args.get("user")==null)?"":args.get("user").toString())
+			.append("user-agent", (args.get("user-agent")==null)?"":args.get("user-agent").toString());
 			user.put("handset", handset);
 			
 			user.put("appVersion", args.get("appVersion").toString());
