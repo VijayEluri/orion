@@ -41,6 +41,18 @@ public final class StringUnit {
 		return  new SimpleDateFormat(partern).format(date);
 	}
 	
+	/**
+	 * 获取一个范围内的指定int数
+	 * @param min
+	 * @param max
+	 * @return
+	 */
+	public static int getRandomInt(int min,int max){
+		return (int)Math.round(Math.random()*(max-min)+min);
+	}
 	
+//	public static void main(String[] args) {
+//		System.out.println(getRandomInt(0,100));
+//	}
 	
 }

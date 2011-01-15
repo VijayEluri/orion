@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -23,7 +22,6 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
-import com.mongodb.MongoException;
 import com.mongodb.util.JSON;
 
 /**
@@ -115,7 +113,28 @@ public class FWall implements Runnable {
 	 */
 	private int dayUpdateSec = 01;
 	
+	/**
+	 * 广告比率
+	 */
+	private int woobooADcent = 50;
 	
+	
+	/**
+	 * @return the woobooADcent
+	 */
+	public final int getWoobooADcent() {
+		return woobooADcent;
+	}
+
+
+	/**
+	 * @param woobooADcent the woobooADcent to set
+	 */
+	public final void setWoobooADcent(int woobooADcent) {
+		this.woobooADcent = woobooADcent;
+	}
+
+
 	/**
 	 * ### 适用于ver2.0版的请求 ###
 	 * 由当前的url指向真正的图片地址
@@ -628,6 +647,7 @@ public class FWall implements Runnable {
 			}
 			
 			//其他配置
+			this.woobooADcent = Integer.parseInt(ini.get("wooboocent").toString());
 			this.dayUpdateMin = Integer.parseInt(ini.get("dayUpdateMin").toString());
 			this.dayUpdateSec = Integer.parseInt(ini.get("dayUpdateSec").toString());
 			this.newPicsOneDay = Integer.parseInt(ini.get("newPicsOneDay").toString());

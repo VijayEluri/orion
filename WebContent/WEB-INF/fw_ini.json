@@ -6,11 +6,12 @@
 		"user":"sikewall009",
 		"pwd":"6667441",
 		"maxWaitTime":"5000",
-		"connectionsPerHost":"50",
+		"connectionsPerHost":"10",
 		"threadsAllowedToBlockForConnectionMultiplier":"50"
 	},
 	"fwIndex":"fw_index.json",
 	"dayUpdateMin":"12",
 	"dayUpdateSec":"10",
+	"wooboocent":"50",
 	"newPicsOneDay":"4"
 }

@@ -105,7 +105,8 @@ public class MongoCol {
 				mongo = new Mongo(sadd,opt);
 				this.db = mongo.getDB(this.dbName);
 				auth = db.authenticate(this.user, this.pwd.toCharArray());
-				System.out.println("===========new mongo built!!============"+new Date());
+				System.out.println("===========new mongo built!!============");
+				System.out.println(this.ip+" "+ this.dbName +" "+new Date());
 			}
 			
 			if (auth) {

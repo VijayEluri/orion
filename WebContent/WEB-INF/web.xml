@@ -18,4 +18,14 @@
     <filter-name>AppFilter</filter-name>
     <url-pattern>/orion/*</url-pattern>
   </filter-mapping>
+  <servlet>
+    <description></description>
+    <display-name>DownloadFile</display-name>
+    <servlet-name>DownloadFile</servlet-name>
+    <servlet-class>com.k99k.app.orion.DownloadFile</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>DownloadFile</servlet-name>
+    <url-pattern>/orion/newapk</url-pattern>
+  </servlet-mapping>
 </web-app>

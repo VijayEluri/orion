@@ -13,11 +13,11 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.stringtree.json.JSONReader;
-import org.stringtree.json.JSONValidatingReader;
 
 import com.k99k.tools.IO;
+import com.k99k.tools.StringUnit;
 import com.k99k.tools.encrypter.Encrypter;
+import org.stringtree.json.*;
 
 /**
  * Servlet Filter implementation class AppFilter
@@ -41,7 +41,7 @@ public class AppFilter implements Filter {
 	
 //	private boolean test = false;
 	
-	private final static JSONReader jsonReader = new JSONValidatingReader();
+//	private final static JSONReader jsonReader = new JSONValidatingReader();
 	
 //	/**
 //	 * 加密用的key
@@ -105,7 +105,7 @@ public class AppFilter implements Filter {
 				try {
 					String reqStr = (String)req.getParameter("wall");
 					String deStr = desEncrypt.decrypt(reqStr);
-					HashMap<String,String> loginTask = (HashMap<String, String>) jsonReader.read(deStr);
+					HashMap<String,Object> loginTask = (HashMap<String, Object>) (new JSONValidatingReader().read(deStr));
 					loginTask.put("user-agent", req.getHeader("user-agent"));
 					loginTask.put("ip", req.getRemoteAddr());
 					fwall.addTask(loginTask);
@@ -129,6 +129,20 @@ public class AppFilter implements Filter {
 					return;
 				}
 			}
+			//处理广告
+			if (url.indexOf("getadtype")>0) {
+				
+				System.out.println(req.getParameter("acti"));
+				String ad = "youmi";
+				//按随机比率取广告
+				if (StringUnit.getRandomInt(0, 100) < fwall.getWoobooADcent()) {
+					ad = "wooboo";
+				}else{
+					ad = "youmi";
+				}
+				response.getWriter().print(ad);
+				return;
+			}
 //			//处理图片请求--在后面单独处理
 //			if (url.indexOf(".jpg")>0) {
 //				
@@ -144,7 +158,7 @@ public class AppFilter implements Filter {
 			String deStr = "";
 			try {
 				deStr = desEncrypt.decrypt(reqStr);
-				String s = ((HashMap<String,Object>)jsonReader.read(deStr)).get("imei").toString();
+				String s = ((HashMap<String,Object>)(new JSONValidatingReader().read(deStr))).get("imei").toString();
 				if (s != null && s.length() >5) {
 					imei = s;
 				}
@@ -152,6 +166,7 @@ public class AppFilter implements Filter {
 				System.out.println("reqStr:"+reqStr);
 				System.out.println("deStr:"+deStr);
 				e.printStackTrace();
+				imei = "";
 			}
 			//此处不return,未匹配时向下走
 		}
@@ -159,7 +174,7 @@ public class AppFilter implements Filter {
 		//处理登录(老)
 		if (url.indexOf("fw_index")>0 && !isNewReq) {
 			if (!imei.equals("")) {
-				HashMap<String,String> loginTask = new HashMap<String,String>();
+				HashMap<String,Object> loginTask = new HashMap<String,Object>();
 				loginTask.put("imei",imei);
 				loginTask.put("userName", (req.getHeader("userName")==null)?"Noname":req.getHeader("userName"));
 				loginTask.put("imsi", (req.getHeader("imsi")==null)?"":req.getHeader("imsi"));
@@ -199,13 +214,18 @@ public class AppFilter implements Filter {
 			String picFileName = url.substring(url.lastIndexOf("/")+1,url.lastIndexOf("."));
 			if (picFileName.charAt(0) == '_' || picFileName.charAt(2) == '_') {
 				String[] picArr = fwall.getPicPathByOid(picFileName);
+				if (picArr == null || picArr.length < 2) {
+					System.out.println("getPicPathByOid failed:"+url);
+					chain.doFilter(request, response);
+					return;
+				}
 				resp.setHeader("pic_oid", picArr[0]);
 				RequestDispatcher dispatcher = req.getRequestDispatcher(picArr[1]);
 				dispatcher.forward(request, resp);
 				return;
 			}
 			String sortBy = "time";
-			String sortType = "1";
+			String sortType = "0";
 //			System.out.println("====test imei========:"+req.getHeader("imei"));
 //			if (req.getParameter("wall")!= null && req.getParameter("sortBy")!= null && req.getParameter("sortType")!= null) {
 //				sortBy = req.getParameter("sortBy");
@@ -214,7 +234,7 @@ public class AppFilter implements Filter {
 //			}else{
 			//处理图片重定向
 				sortBy = (req.getHeader("sortBy") == null)?"time":req.getHeader("sortBy");
-				sortType = (req.getHeader("sortType") == null || (!req.getHeader("sortType").matches("\\d+"))) ? "1" : req.getHeader("sortType");
+				sortType = (req.getHeader("sortType") == null || (!req.getHeader("sortType").matches("\\d+"))) ? "0" : req.getHeader("sortType");
 //			System.out.println("sortBy:"+sortBy+" sortType:"+sortType);
 //			}
 			
@@ -261,7 +281,7 @@ public class AppFilter implements Filter {
 			//String type = req.getHeader("type");
 			//pic_oid = req.getHeader("pic_oid");
 			//System.out.println("type:"+type+" pic_oid:"+pic_oid+" imei:"+req.getHeader("imei"));
-			if (imei.equals("")|| pic_oid.equals("")) {
+			if (imei.equals("")|| pic_oid.equals("") || pic_oid.equals("null")) {
 				//非手机请求,不处理
 				response.getWriter().print("");
 				return;
@@ -368,6 +388,32 @@ public class AppFilter implements Filter {
 			response.getWriter().print("MongoConfig create:"+m.createDB());
 			return;
 		}		
+		//-----------------------------------
+		//设置wooboo的广告比
+		if (url.indexOf("setwooboocent")>0) {
+			if (req.getParameter("setwooboocent") !=null ) {
+				String s = req.getParameter("setwooboocent");
+				if (s.matches("[1-9]?[0-9]")) {
+					fwall.setWoobooADcent(Integer.parseInt(s));
+				}
+				
+			}
+			response.getWriter().print("wooboocent:"+fwall.getWoobooADcent());
+			return;
+		}
+		//-----------------------------------
+		//处理广告
+		if (url.indexOf("getadtype")>0) {
+			String ad = "youmi";
+			//按随机比率取广告
+			if (StringUnit.getRandomInt(0, 100) < fwall.getWoobooADcent()) {
+				ad = "wooboo";
+			}else{
+				ad = "youmi";
+			}
+			response.getWriter().print(ad);
+			return;
+		}
 		//-----------------------------------
 		//默认回复404
 //		response.getWriter().print("404");
