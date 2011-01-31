@@ -12,6 +12,7 @@
 	"fwIndex":"fw_index.json",
 	"dayUpdateMin":"12",
 	"dayUpdateSec":"10",
-	"wooboocent":"50",
+	"s_wooboocent":"50",
+	"k_wooboocent":"50",
 	"newPicsOneDay":"4"
 }

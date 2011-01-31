@@ -61,6 +61,19 @@ public class AppFilter implements Filter {
 		}
 		return null;
 	}
+	
+	/**
+	 * 标记使用中国服务器的区域
+	 */
+	static final HashMap<String, String> CNMap = createCNMap();
+	
+	private final static HashMap<String, String> createCNMap(){
+		HashMap<String, String> m = new HashMap<String, String>();
+		m.put("CN", "CN");
+		m.put("TW", "TW");
+		m.put("JP", "JP");
+		return m;
+	}
 
 	/**
 	 * @see Filter#doFilter(ServletRequest, ServletResponse, FilterChain)
@@ -91,9 +104,11 @@ public class AppFilter implements Filter {
 		String pic_oid = "";
 		String imei = "";
 		String type = "";
+		String lang = "CN";
 		pic_oid = (req.getHeader("pic_oid") == null)?"":req.getHeader("pic_oid");
 		imei = (req.getHeader("imei") == null || req.getHeader("imei").length()<5)?"":req.getHeader("imei");
 		type = (req.getHeader("type") == null)?"":req.getHeader("type");
+		lang = (req.getHeader("lang") == null)?"CN":req.getHeader("lang");
 		
 //		System.out.println(url);
 		//-----------------------------------
@@ -109,13 +124,17 @@ public class AppFilter implements Filter {
 					loginTask.put("user-agent", req.getHeader("user-agent"));
 					loginTask.put("ip", req.getRemoteAddr());
 					fwall.addTask(loginTask);
-					response.getWriter().print(fw_ini_html);
+					String la = loginTask.get("lang").toString();
+					if (CNMap.containsKey(la)) {
+						lang = la;
+						response.getWriter().print(fw_ini_html);
+					}else{
+						response.getWriter().print(fw_ini_html_us);
+					}
 					return;
 				} catch (Exception e) {
 					e.printStackTrace();
-					chain.doFilter(request, response);
 				}
-				//TODO 后期根据语言指向到不同的fw_ini文件
 				chain.doFilter(request, response);
 				return;
 			}
@@ -131,11 +150,14 @@ public class AppFilter implements Filter {
 			}
 			//处理广告
 			if (url.indexOf("getadtype")>0) {
-				
-				System.out.println(req.getParameter("acti"));
+				String ks = "s";
+				if (req.getParameter("acti") != null) {
+					ks = req.getParameter("acti");
+				}
+				//System.out.println(req.getParameter("acti"));
 				String ad = "youmi";
 				//按随机比率取广告
-				if (StringUnit.getRandomInt(0, 100) < fwall.getWoobooADcent()) {
+				if (StringUnit.getRandomInt(0, 100) < fwall.getWoobooADcent(ks)) {
 					ad = "wooboo";
 				}else{
 					ad = "youmi";
@@ -195,17 +217,31 @@ public class AppFilter implements Filter {
 				loginTask.put("user", req.getHeader("user"));
 				loginTask.put("user-agent", req.getHeader("user-agent"));
 				loginTask.put("appVersion", (req.getHeader("appVersion")==null)?"":req.getHeader("appVersion"));
-				loginTask.put("lang", req.getHeader("lang"));
+				loginTask.put("lang", lang);
 				loginTask.put("ip", req.getRemoteAddr());
 				fwall.addTask(loginTask);
 			}
+			
 			if (fwall.getWallconfig().length() > 3) {
-				response.getWriter().print(fwall.getWallconfig());
+				if (CNMap.containsKey(lang)) {
+					response.getWriter().print(fwall.getWallconfig());
+				}else{
+					response.getWriter().print(fwall.getWallconfig_us());
+				}
 				return;
 			}else{
 				chain.doFilter(request, response);
 				return;
 			}
+		}
+		//老的
+		if (url.indexOf("fw_ini")>0) {
+			if (CNMap.containsKey(lang)) {
+				response.getWriter().print(fw_ini_html);
+			}else{
+				response.getWriter().print(fw_ini_html_us);
+			}
+			return;
 		}
 		
 		//-----------------------------------
@@ -326,12 +362,18 @@ public class AppFilter implements Filter {
 				return;
 			}
 		}
+//		//查看index文件
+//		if (url.indexOf("lookforindex_us") > -1) {
+//			response.getWriter().print(fwall.getWallconfig_us());
+//			return;
+//		}
 		//-----------------------------------
 		//查看index文件
 		if (url.indexOf("lookforindex") > -1) {
 			response.getWriter().print(fwall.getWallconfig());
 			return;
 		}
+
 		//-----------------------------------
 		//重新初始化
 		if (url.indexOf("initfwall") > -1) {
@@ -391,22 +433,25 @@ public class AppFilter implements Filter {
 		//-----------------------------------
 		//设置wooboo的广告比
 		if (url.indexOf("setwooboocent")>0) {
+			String ks = (req.getParameter("ks") == null)?"s":req.getParameter("ks");
 			if (req.getParameter("setwooboocent") !=null ) {
 				String s = req.getParameter("setwooboocent");
 				if (s.matches("[1-9]?[0-9]")) {
-					fwall.setWoobooADcent(Integer.parseInt(s));
+					boolean isK = ks.equals("k");
+					fwall.setWoobooADcent(Integer.parseInt(s),isK);
 				}
 				
 			}
-			response.getWriter().print("wooboocent:"+fwall.getWoobooADcent());
+			response.getWriter().print("wooboocent_"+ks+":"+fwall.getWoobooADcent(ks));
 			return;
 		}
 		//-----------------------------------
 		//处理广告
 		if (url.indexOf("getadtype")>0) {
+			String ks = (req.getParameter("acti") == null)?"s":req.getParameter("acti");
 			String ad = "youmi";
 			//按随机比率取广告
-			if (StringUnit.getRandomInt(0, 100) < fwall.getWoobooADcent()) {
+			if (StringUnit.getRandomInt(0, 100) < fwall.getWoobooADcent(ks)) {
 				ad = "wooboo";
 			}else{
 				ad = "youmi";
@@ -436,18 +481,23 @@ public class AppFilter implements Filter {
 
 	static String fw_ini_html = "";
 	static String fw_ini_path = "";
+	static String fw_ini_html_us = "";
+	static String fw_ini_path_us = "";
 	
 	private static void reloadFwIni(){
-		String s = "";
+		String s = "",s_us="";
 		try {
 			s = IO.readTxt(fw_ini_path, "utf-8");
+			s_us = IO.readTxt(fw_ini_path_us, "utf-8");
 			
 		} catch (IOException e) {
 			e.printStackTrace();
+			s_us = "";
 			s = "";
 		}
 		if (s.length() > 10) {
 			fw_ini_html = s;
+			fw_ini_html_us = s_us;
 		}
 	}
 	
@@ -459,13 +509,16 @@ public class AppFilter implements Filter {
 		iniPath = fConfig.getServletContext().getRealPath("/")+"WEB-INF/fw_ini.json";
 		//System.out.println(iniPath);
 		fw_ini_path = fConfig.getServletContext().getRealPath("/")+"WEB-INF/fw_ini.htm";
+		fw_ini_path_us = fConfig.getServletContext().getRealPath("/")+"WEB-INF/fw_ini_us.htm";
 		try {
 			fw_ini_html = IO.readTxt(fw_ini_path, "utf-8");
-		} catch (IOException e) {
+			fw_ini_html_us = IO.readTxt(fw_ini_path_us, "utf-8");
+			} catch (IOException e) {
 			e.printStackTrace();
 		}
-		if (fw_ini_html.length() < 10) {
+		if (fw_ini_html.length() < 10 || fw_ini_html_us.length() < 10) {
 			System.out.println("fw_ini_html ERROR!"+fw_ini_html);
+			System.out.println("fw_ini_html_us ERROR!"+fw_ini_html_us);
 		}
 		fwall = new FWall(iniPath);
 		Thread fw = new Thread(fwall,"fwall");

@@ -75,6 +75,11 @@ public class FWall implements Runnable {
 	private String wallconfig = "";
 	
 	/**
+	 * 非中国服务器的wallconfig
+	 */
+	private String wallconfig_us = "";
+	
+	/**
 	 * 任务列表
 	 */
 	private final ArrayList taskList = new ArrayList(100);
@@ -116,22 +121,30 @@ public class FWall implements Runnable {
 	/**
 	 * 广告比率
 	 */
-	private int woobooADcent = 50;
+	private int k_woobooADcent = 50;
+	private int s_woobooADcent = 50;
 	
 	
 	/**
 	 * @return the woobooADcent
 	 */
-	public final int getWoobooADcent() {
-		return woobooADcent;
+	public final int getWoobooADcent(String ks) {
+		if (ks.equals("k")) {
+			return k_woobooADcent;
+		}
+		return s_woobooADcent;
 	}
 
 
 	/**
 	 * @param woobooADcent the woobooADcent to set
 	 */
-	public final void setWoobooADcent(int woobooADcent) {
-		this.woobooADcent = woobooADcent;
+	public final void setWoobooADcent(int woobooADcent,boolean isK) {
+		if (isK) {
+			this.k_woobooADcent = woobooADcent;
+		}else{
+			this.s_woobooADcent = woobooADcent;
+		}
 	}
 
 
@@ -509,20 +522,19 @@ public class FWall implements Runnable {
 	}
 	
 	/**
-	 * 用户登录并返回初始化配置文件
-	 * @return String json化的配置文件
+	 * 用户登录
 	 */
-	public final String login(Map args){
+	public final void login(Map args){
 		
 		//处理用户信息
 		//imei作为查询条件
 		if (args.get("imei") == null ) {
-			return this.wallconfig;
+			return;
 		}
 		String imei = (String)args.get("imei");
 		//验证imei是否存在
 		if (imei.length() < 5) {
-			return this.wallconfig;
+			return;
 		}
 		try {
 			BasicDBObject q = new BasicDBObject();
@@ -586,7 +598,6 @@ public class FWall implements Runnable {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return this.wallconfig;
 	}
 	
 	/**
@@ -647,7 +658,8 @@ public class FWall implements Runnable {
 			}
 			
 			//其他配置
-			this.woobooADcent = Integer.parseInt(ini.get("wooboocent").toString());
+			this.k_woobooADcent = Integer.parseInt(ini.get("k_wooboocent").toString());
+			this.s_woobooADcent = Integer.parseInt(ini.get("s_wooboocent").toString());
 			this.dayUpdateMin = Integer.parseInt(ini.get("dayUpdateMin").toString());
 			this.dayUpdateSec = Integer.parseInt(ini.get("dayUpdateSec").toString());
 			this.newPicsOneDay = Integer.parseInt(ini.get("newPicsOneDay").toString());
@@ -690,12 +702,10 @@ public class FWall implements Runnable {
 			//DBCursor cur = coll.find();
 			//先由配置文件转换到DBObject
 			DBObject config = (DBObject) JSON.parse(this.wallconfig);
-			//if (cur.hasNext()) {
-			//config = cur.next();
+			
 			//生成前50页最新图的列表
 			DBCursor newCur = picColl.find(new BasicDBObject("topId",1).append("state", 1)).sort(new BasicDBObject("addTime",-1)).limit(60*4);
 			int i = 0;
-			//int j = 0;
 			BasicBSONList index = new BasicBSONList();
 			BasicBSONList pics = new BasicBSONList();//(BasicBSONList)(((BasicDBObject)((BasicBSONList)config.get("index")).get(0)).get("pics"));
 			//pics.clear();
@@ -830,6 +840,15 @@ public class FWall implements Runnable {
 			config.put("index", index);
 			this.wallconfig = config.toString();
 			
+			//生成非中文服务器的wallConfig
+			Object ous = config.get("server_us");
+			if (ous != null) {
+				BasicBSONList usList = (BasicBSONList) ous;
+				BasicBSONList cnServers = (BasicBSONList)config.get("servers");
+				usList.addAll(cnServers);
+				config.put("servers", usList);
+			}
+			this.wallconfig_us = config.toString();
 			//生成oid:WallPic缓存
 			DBCursor ccur = picColl.find(new BasicDBObject("state",1)).sort(new BasicDBObject("picId",1));
 			while (ccur.hasNext()) {
@@ -1208,6 +1227,13 @@ public class FWall implements Runnable {
 	 */
 	public String getWallconfig() {
 		return wallconfig;
+	}
+	
+	/**
+	 * @return the wallconfig
+	 */
+	public String getWallconfig_us() {
+		return wallconfig_us;
 	}
 
 	/**
