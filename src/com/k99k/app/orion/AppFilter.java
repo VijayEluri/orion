@@ -140,13 +140,35 @@ public class AppFilter implements Filter {
 			}
 			//处理fw_index
 			if (url.indexOf("fw_index")>0) {
-				if (fwall.getWallconfig().length() > 3) {
-					response.getWriter().print(fwall.getWallconfig());
-					return;
-				}else{
+				try {
+					String reqStr = (String)req.getParameter("wall");
+					String deStr = desEncrypt.decrypt(reqStr);
+					HashMap<String,Object> jsonReq = (HashMap<String, Object>) (new JSONValidatingReader().read(deStr));
+					String la = jsonReq.get("lang").toString();
+					if (CNMap.containsKey(la)) {
+						lang = la;
+						response.getWriter().print(fwall.getWallconfig());
+					}else{
+						response.getWriter().print(fwall.getWallconfig_us());
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
 					chain.doFilter(request, response);
 					return;
 				}
+				return;
+				
+//				if (fwall.getWallconfig().length() > 3) {
+//					if (CNMap.containsKey(lang)) {
+//						response.getWriter().print(fwall.getWallconfig());
+//					}else{
+//						response.getWriter().print(fwall.getWallconfig_us());
+//					}
+//					return;
+//				}else{
+//					chain.doFilter(request, response);
+//					return;
+//				}
 			}
 			//处理广告
 			if (url.indexOf("getadtype")>0) {
