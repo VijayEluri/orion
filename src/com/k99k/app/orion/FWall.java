@@ -111,12 +111,14 @@ public class FWall implements Runnable {
 	/**
 	 * 每天更新时间的分钟数
 	 */
-	private int dayUpdateMin = 12;
+	private int dayUpdateHour = 12;
 	
 	/**
 	 * 每天更新时间的秒数
 	 */
-	private int dayUpdateSec = 01;
+	private int dayUpdateMin = 01;
+	
+	
 	
 	/**
 	 * 广告比率
@@ -484,7 +486,7 @@ public class FWall implements Runnable {
 	 */
 	public boolean addDown(String picOid,String imei){
 		
-		if (!checkIMEI(imei)) {
+		if (!checkIMEI(imei) || picOid.trim().length() < 5) {
 			return false;
 		}
 		try {
@@ -661,9 +663,11 @@ public class FWall implements Runnable {
 			this.k_woobooADcent = Integer.parseInt(ini.get("k_wooboocent").toString());
 			this.s_woobooADcent = Integer.parseInt(ini.get("s_wooboocent").toString());
 			this.dayUpdateMin = Integer.parseInt(ini.get("dayUpdateMin").toString());
-			this.dayUpdateSec = Integer.parseInt(ini.get("dayUpdateSec").toString());
+			this.dayUpdateHour = Integer.parseInt(ini.get("dayUpdateHour").toString());
 			this.newPicsOneDay = Integer.parseInt(ini.get("newPicsOneDay").toString());
 			this.indexJsonPath = iniFile.substring(0,iniFile.lastIndexOf("/")+1)+ini.get("fwIndex").toString();
+			
+			
 			//读取索引配置文件
 			this.wallconfig = IO.readTxt(this.indexJsonPath, "UTF-8");
 			System.out.println("indexJsonPath:"+indexJsonPath);
@@ -1101,9 +1105,15 @@ public class FWall implements Runnable {
 		DBCollection coll = mongoCol.getColl("wallDay");
 		DBCursor cur = coll.find(new BasicDBObject("id",1));
 		if (cur.hasNext()) {
-			return (Date)cur.next().get("nextUpdateTime");
+			Calendar c = Calendar.getInstance();
+			c.setTime((Date)cur.next().get("nextUpdateTime"));
+			c.set(Calendar.HOUR_OF_DAY, this.dayUpdateHour);
+			c.set(Calendar.MINUTE, this.dayUpdateMin);
+			return c.getTime();
 		}else{
 			Calendar c = Calendar.getInstance();
+			c.set(Calendar.HOUR_OF_DAY, this.dayUpdateHour);
+			c.set(Calendar.MINUTE, this.dayUpdateMin);
 			c.add(Calendar.DATE, +1);
 			return c.getTime();
 		}
@@ -1143,6 +1153,14 @@ public class FWall implements Runnable {
 				//真实更新的图片数
 				int i = 0;
 				boolean needInit = false;
+				//下次更新时间推后一天
+				Calendar c = Calendar.getInstance();
+				c.setTime(nextUpdateTime);
+				c.set(Calendar.HOUR_OF_DAY, this.dayUpdateHour);
+				c.set(Calendar.MINUTE, this.dayUpdateMin);
+				c.add(Calendar.DATE, 1);
+				this.nextUpdateTime = c.getTime();
+				
 				//当更新数大于0时进行日更新操作
 				if (this.newPicsOneDay > 0) {
 					DBCollection coll_pic = mongoCol.getColl("wallPic");
@@ -1190,17 +1208,15 @@ public class FWall implements Runnable {
 						}else{
 							this.lastUpdate = lastUpdateT;
 						}
-						System.out.println("----lastUpdate:"+this.lastUpdate);
+						
+					}else{
+						needInit = true;
+						this.lastUpdate = new Date();
 					}
+					System.out.println("----lastUpdate:"+this.lastUpdate);
 				}
 
 				//更新下次更新时间,当newPicsOneDay不为0时
-				Calendar c = Calendar.getInstance();
-				c.setTime(nextUpdateTime);
-				c.set(Calendar.HOUR_OF_DAY, 12);
-				c.set(Calendar.MINUTE, 00);
-				c.add(Calendar.DATE, 1);
-				this.nextUpdateTime = c.getTime();
 				if (this.newPicsOneDay > 0) {
 					//用于更新wallDay的数据
 					BasicDBObject setData = new BasicDBObject("nextUpdateTime",this.nextUpdateTime);
@@ -1295,7 +1311,7 @@ public class FWall implements Runnable {
 	 */
 	public static void main(String[] args) {
 		FWall f = new FWall("f:/works/workspace_keel/orion/WebContent/WEB-INF/fw_ini.json");
-		f.mongoCol.setIp("202.102.113.204");
+		f.mongoCol.setIp("202.102.40.43");
 		
 		/*
 		DBCollection coll_cate = f.mongoCol.getColl("wallCate");
@@ -1372,20 +1388,20 @@ public class FWall implements Runnable {
 //		o.put("nextUpdateTime", c.getTime());
 //		coll.save(o);
 //设置时间		
-		DBCollection coll = f.mongoCol.getColl("wallDay");
-		DBCursor cur = coll.find();
-		if (cur.hasNext()) {
-			DBObject o = cur.next();
-			Date d = (Date)o.get("nextUpdateTime");
-			Calendar c = Calendar.getInstance();
-			c.set(Calendar.HOUR_OF_DAY, 12);
-			c.set(Calendar.MINUTE, 00);
-			//c.add(Calendar.DATE, 1);
-			//o.put("nextUpdateTime", c.getTime());
-			o.put("nextUpdateTime", c.getTime());
-			o.put("lastUpdate",new Date());
-			coll.update(new BasicDBObject("id",1), o);
-		}
+//		DBCollection coll = f.mongoCol.getColl("wallDay");
+//		DBCursor cur = coll.find();
+//		if (cur.hasNext()) {
+//			DBObject o = cur.next();
+//			Date d = (Date)o.get("nextUpdateTime");
+//			Calendar c = Calendar.getInstance();
+//			c.set(Calendar.HOUR_OF_DAY, 12);
+//			c.set(Calendar.MINUTE, 00);
+//			//c.add(Calendar.DATE, 1);
+//			//o.put("nextUpdateTime", c.getTime());
+//			o.put("nextUpdateTime", c.getTime());
+//			o.put("lastUpdate",new Date());
+//			coll.update(new BasicDBObject("id",1), o);
+//		}
 //----------------------
 		
 //		System.out.println(f.getWallconfig());
