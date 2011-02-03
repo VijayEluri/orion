@@ -8,6 +8,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -118,7 +119,10 @@ public class FWall implements Runnable {
 	 */
 	private int dayUpdateMin = 01;
 	
-	
+	/**
+	 * 北京时区 
+	 */
+	private final static TimeZone timeZone = TimeZone.getTimeZone("GMT+8");
 	
 	/**
 	 * 广告比率
@@ -899,7 +903,7 @@ public class FWall implements Runnable {
 	
 	
 	private final void checkReIndexTime(){
-		Calendar c = Calendar.getInstance();
+		Calendar c = Calendar.getInstance(timeZone);
 		c.add(Calendar.SECOND, this.starSleep);
 		this.nextReIndexStarTime = c.getTime();
 	}
@@ -1105,13 +1109,13 @@ public class FWall implements Runnable {
 		DBCollection coll = mongoCol.getColl("wallDay");
 		DBCursor cur = coll.find(new BasicDBObject("id",1));
 		if (cur.hasNext()) {
-			Calendar c = Calendar.getInstance();
+			Calendar c = Calendar.getInstance(timeZone);
 			c.setTime((Date)cur.next().get("nextUpdateTime"));
 			c.set(Calendar.HOUR_OF_DAY, this.dayUpdateHour);
 			c.set(Calendar.MINUTE, this.dayUpdateMin);
 			return c.getTime();
 		}else{
-			Calendar c = Calendar.getInstance();
+			Calendar c = Calendar.getInstance(timeZone);
 			c.set(Calendar.HOUR_OF_DAY, this.dayUpdateHour);
 			c.set(Calendar.MINUTE, this.dayUpdateMin);
 			c.add(Calendar.DATE, +1);
@@ -1154,7 +1158,7 @@ public class FWall implements Runnable {
 				int i = 0;
 				boolean needInit = false;
 				//下次更新时间推后一天
-				Calendar c = Calendar.getInstance();
+				Calendar c = Calendar.getInstance(timeZone);
 				c.setTime(nextUpdateTime);
 				c.set(Calendar.HOUR_OF_DAY, this.dayUpdateHour);
 				c.set(Calendar.MINUTE, this.dayUpdateMin);
@@ -1276,7 +1280,7 @@ public class FWall implements Runnable {
 	public String updateNewPicsNow(){
 		String re = "fail";
 		try {
-			Calendar c = Calendar.getInstance();
+			Calendar c = Calendar.getInstance(timeZone);
 			c.add(Calendar.HOUR_OF_DAY, -1);
 			DBCollection coll = mongoCol.getColl("wallDay");
 			DBCursor cur = coll.find();
@@ -1346,7 +1350,7 @@ public class FWall implements Runnable {
 		*/
 		
 		/*
-		Calendar c = Calendar.getInstance();
+		Calendar c = Calendar.getInstance(timeZone);
 		c.set(Calendar.HOUR_OF_DAY, 12);
 		c.set(Calendar.MINUTE, 00);
 		f.nextUpdateTime = c.getTime();
@@ -1379,7 +1383,7 @@ public class FWall implements Runnable {
 //----------------------	
 //生成每日更新时间的表
 //		DBCollection coll = mongoCol.getColl("wallDay");
-//		Calendar c = Calendar.getInstance();
+//		Calendar c = Calendar.getInstance(timeZone);
 //		c.set(Calendar.HOUR_OF_DAY, 12);
 //		c.set(Calendar.MINUTE, 00);
 //		//c.add(Calendar.DATE, 1);
@@ -1393,7 +1397,7 @@ public class FWall implements Runnable {
 //		if (cur.hasNext()) {
 //			DBObject o = cur.next();
 //			Date d = (Date)o.get("nextUpdateTime");
-//			Calendar c = Calendar.getInstance();
+//			Calendar c = Calendar.getInstance(timeZone);
 //			c.set(Calendar.HOUR_OF_DAY, 12);
 //			c.set(Calendar.MINUTE, 00);
 //			//c.add(Calendar.DATE, 1);
