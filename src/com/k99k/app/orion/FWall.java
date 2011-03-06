@@ -857,8 +857,11 @@ public class FWall implements Runnable {
 				config.put("servers", usList);
 			}
 			this.wallconfig_us = config.toString();
+			System.out.println("wallconfig_us built.");
 			//生成oid:WallPic缓存
-			DBCursor ccur = picColl.find(new BasicDBObject("state",1)).sort(new BasicDBObject("picId",1));
+			//DBCursor ccur = picColl.find(new BasicDBObject("state",1)).sort(new BasicDBObject("picId",1));
+			DBCursor ccur = picColl.find();
+			int ii = 0;
 			while (ccur.hasNext()) {
 				DBObject o = ccur.next();
 				String oid = ((ObjectId) (o.get("_id"))).toString();
@@ -884,13 +887,19 @@ public class FWall implements Runnable {
 				pic.setState((Integer)o.get("state"));
 				pic.setTopId((Integer)o.get("topId"));
 				objIdMap.put(oid,pic);
+				ii++;
+//				if (ii%50 == 0) {
+//					System.out.println("objIdMap building:"+ii);
+//				}
 			}
-			
+			System.out.println("objIdMap built:"+ii);
 			this.checkReIndexTime();
 			//获取下次日更新时间
 			this.nextUpdateTime = this.getNextDayUpdateTime();
 			
 			System.out.println("=======nextReIndexStarTime:"+this.nextReIndexStarTime+"=====");
+			System.out.println("=======nextUpdateTime:"+this.nextUpdateTime+" now:"+new Date()+"=====");
+			
 		} catch (Exception e) {
 			System.out.println("------"+new Date());e.printStackTrace();
 			return false;
@@ -1151,9 +1160,11 @@ public class FWall implements Runnable {
 	public void updateByDay(){
 		try {
 			Date now  = new Date();
+			//System.out.println("---- updateByDay lastUpdate:"+this.lastUpdate+" now:"+now);
+			//System.out.println("---- updateByDay nextUpdateTime:"+this.nextUpdateTime+" now:"+now);
 			if (now.after(this.nextUpdateTime)) {
+				System.out.println("---- updateByDay running... newPicsOneDay:"+this.newPicsOneDay+" nextUpdateTime:"+nextUpdateTime);
 				
-				System.out.println("---- updateByDay running...");
 				//真实更新的图片数
 				int i = 0;
 				boolean needInit = false;
@@ -1164,6 +1175,7 @@ public class FWall implements Runnable {
 				c.set(Calendar.MINUTE, this.dayUpdateMin);
 				c.add(Calendar.DATE, 1);
 				this.nextUpdateTime = c.getTime();
+				System.out.println("---- nextUpdateTime:"+this.nextUpdateTime);
 				
 				//当更新数大于0时进行日更新操作
 				if (this.newPicsOneDay > 0) {
@@ -1198,12 +1210,16 @@ public class FWall implements Runnable {
 //				} catch (InterruptedException e) {
 //					return;
 //				}
+					
+					/*
 					//是否数据有更新，如有则重新初始化
 					DBCollection coll = mongoCol.getColl("wallDay");
 					DBCursor cur = coll.find(new BasicDBObject("id",1));
 					if (cur.hasNext()) {
 						DBObject dbo = (DBObject) cur.next();
 						Date lastUpdateT = (Date) dbo.get("lastUpdate");
+						System.out.println("lastUpdateT:"+lastUpdateT);
+						System.out.println("this.lastUpdate:"+this.lastUpdate);
 						//如果本服务器的lastUpdate时间比数据库里的更新时间早，则进行init()
 						if (this.lastUpdate != null && this.lastUpdate.before(lastUpdateT)) {
 							this.lastUpdate = lastUpdateT;
@@ -1217,6 +1233,10 @@ public class FWall implements Runnable {
 						needInit = true;
 						this.lastUpdate = new Date();
 					}
+					*/
+					needInit = true;
+					this.lastUpdate = new Date();
+					
 					System.out.println("----lastUpdate:"+this.lastUpdate);
 				}
 

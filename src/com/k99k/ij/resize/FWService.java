@@ -397,7 +397,8 @@ public class FWService implements Runnable {
 	/**
 	 * ftp同步到配置文件中的所有ftp服务器
 	 */
-	private final void synFtps(){
+	private final boolean synFtps(){
+		boolean re = true;
 		for (int i = 0; i < this.ftps.length; i++) {
 			try {
 				FTPClient client = new FTPClient();
@@ -414,8 +415,10 @@ public class FWService implements Runnable {
 				client.disconnect(true);
 			} catch (Exception e) {
 				log.error("synftps error!", e);
+				re = false;
 			} 
 		}
+		return re;
 	}
 	
 	/**
@@ -540,28 +543,34 @@ public class FWService implements Runnable {
 	@Override
 	public void run() {
 		runFlag = this.init();
-		boolean re = true;
+		int re = 0;
 		while (runFlag) {
 			//每次只查找一个任务
 			int t = this.checkTask();
 			switch (t) {
 			case TASK_SCAN:
 				//扫描preSource文件夹,单层目录，生成缩略图
-				re = ij.makePreviews(prePath, preWidth, preHeight);
+				if(!ij.makePreviews(prePath, preWidth, preHeight)){
+					re = -1;
+				}
 				log.info("=========================\n");
 				break;
 			case TASK_BUILD:
 				//以日期时间为临时目录
 				tmpPath = this.datePath+"/"+now();
-				srcPath = this.srcPath+"/"+now();
+				String srcPathA = this.srcPath+"/"+now();
 				//发布图片
-				ArrayList<String> picList = ij.buildNewPics(readyPath, tmpPath, getInitIDMap(),srcPath);
+				ArrayList<String> picList = ij.buildNewPics(readyPath, tmpPath, getInitIDMap(),srcPathA);
 				//处理临时文件
 				copyFullDir(new File(tmpPath),new  File(outPath));
 				//更新数据库
-				re = this.updateDB(picList);
+				if(!this.updateDB(picList)){
+					re = -2;
+				}
 				//同步ftp
-				this.synFtps();
+				if(!this.synFtps()){
+					re = -3;
+				}
 				log.info("=========================\n");
 				break;
 			default:
@@ -569,10 +578,10 @@ public class FWService implements Runnable {
 			}
 			//更新任务状态
 			if (t != TASK_NO) {
-				if (re) {
+				if (re == 0) {
 					this.updateTaskState(currentTaskId, TASKDONE_OK);
 				}else{
-					this.updateTaskState(currentTaskId, TASKDONE_FAIL);
+					this.updateTaskState(currentTaskId, re);
 				}
 			}
 			

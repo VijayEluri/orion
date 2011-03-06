@@ -20,12 +20,13 @@ if(request.getParameter("oid") != null && request.getParameter("oid").length()>5
 			re = "Task is ready or doing now.";
 			break;
 		case 2:
-			re = "Task is done! [ <a href='/orion/initfwall.jsp'>ReBuild index</a> ]";
+			re = "Task is done! ";
 			break;
 		case 3:
 			re = "Task is failed!";
 			break;
 		default:
+			re = "Task is failed! error:"+state;
 			break;
 		}
 		
