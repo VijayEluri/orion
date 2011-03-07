@@ -396,8 +396,11 @@ public class FWService implements Runnable {
 	
 	/**
 	 * ftp同步到配置文件中的所有ftp服务器
+	 * @param tmpPathTo
+	 * @param srcPathTo
+	 *  
 	 */
-	private final boolean synFtps(){
+	private final boolean synFtps(String tmpPathTo,String srcPathTo){
 		boolean re = true;
 		for (int i = 0; i < this.ftps.length; i++) {
 			try {
@@ -406,12 +409,12 @@ public class FWService implements Runnable {
 				client.login(ftps[i].get("user"),ftps[i].get("pwd"));
 				String cdir = ftps[i].get("dir");
 				//上传生成图
-				log.info("synftp:"+client.getHost()+" dir:"+cdir+" tmpPath:"+tmpPath);
-				uploadFile(client,tmpPath,cdir);	
+				log.info("synftp:"+client.getHost()+" dir:"+cdir+" tmpPath:"+tmpPathTo);
+				uploadFile(client,tmpPathTo,cdir);	
 				//上传源图
 				cdir = ftps[i].get("src");//+"/"+now();
-				log.info("synftp-src:"+client.getHost()+" srcdir:"+cdir+" srcPath:"+srcPath);
-				uploadFile(client,srcPath,cdir+"/"+srcPath.substring(srcPath.lastIndexOf("/")+1));
+				log.info("synftp-src:"+client.getHost()+" srcdir:"+cdir+" srcPathTo:"+srcPathTo);
+				uploadFile(client,srcPathTo,cdir+"/"+srcPathTo.substring(srcPathTo.lastIndexOf("/")+1));
 				client.disconnect(true);
 			} catch (Exception e) {
 				log.error("synftps error!", e);
@@ -557,8 +560,9 @@ public class FWService implements Runnable {
 				break;
 			case TASK_BUILD:
 				//以日期时间为临时目录
-				tmpPath = this.datePath+"/"+now();
-				String srcPathA = this.srcPath+"/"+now();
+				String now = "/"+now();
+				tmpPath = this.datePath+now;
+				String srcPathA = this.srcPath+now;
 				//发布图片
 				ArrayList<String> picList = ij.buildNewPics(readyPath, tmpPath, getInitIDMap(),srcPathA);
 				//处理临时文件
@@ -568,7 +572,7 @@ public class FWService implements Runnable {
 					re = -2;
 				}
 				//同步ftp
-				if(!this.synFtps()){
+				if(!this.synFtps(tmpPath,srcPathA)){
 					re = -3;
 				}
 				log.info("=========================\n");
