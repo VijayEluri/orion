@@ -48,7 +48,7 @@ public final class IO {
 	 */
 	public static final void writeTxt(String txt,String encode, String filePah) throws IOException {
 		Writer out = new BufferedWriter(new OutputStreamWriter(
-	            new FileOutputStream(txt), encode));
+	            new FileOutputStream(filePah), encode));
         out.write(txt);
         out.close();
 	}

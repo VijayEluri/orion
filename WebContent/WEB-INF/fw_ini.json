@@ -1,6 +1,6 @@
 {
 	"mongo":{
-		"ip":"127.0.0.1",
+		"ip":"202.102.40.43",
 		"port":"27017",
 		"db":"fwall",
 		"user":"sikewall009",
@@ -14,5 +14,7 @@
 	"dayUpdateMin":"00",
 	"s_wooboocent":"50",
 	"k_wooboocent":"50",
-	"newPicsOneDay":"4"
+	"newPicsOneDay":"4",
+	"cacheIniPath":"cache.json",
+	"cacheIniPath_us":"cache_us.json"
 }

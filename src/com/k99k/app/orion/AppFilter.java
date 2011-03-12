@@ -34,7 +34,7 @@ public class AppFilter implements Filter {
 	 * @see Filter#destroy()
 	 */
 	public void destroy() {
-		fwall.setRun(false);
+		fwall.exit();
 	}
 	
 	private static FWall fwall;// = new FWall("/WEB-INF/fw_ini.json");

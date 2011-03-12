@@ -8,7 +8,7 @@ package com.k99k.app.orion;
  * @author keel
  *
  */
-public class WallPic {
+public class WallPic  implements Comparable<WallPic>{
 	
 	private String _id;
 	
@@ -18,7 +18,7 @@ public class WallPic {
 	
 	private String cate;
 	
-	private String addTime;
+	private long addTime;
 	
 	private String info;
 	
@@ -103,14 +103,14 @@ public class WallPic {
 	/**
 	 * @return the addTime
 	 */
-	public String getAddTime() {
+	public long getAddTime() {
 		return addTime;
 	}
 
 	/**
 	 * @param addTime the addTime to set
 	 */
-	public void setAddTime(String addTime) {
+	public void setAddTime(long addTime) {
 		this.addTime = addTime;
 	}
 
@@ -238,6 +238,30 @@ public class WallPic {
 	 */
 	public void setPicPath(String[] picPath) {
 		this.picPath = picPath;
+	}
+
+	/**
+	 * topId越小越排前,相同topId下addTime越早越排前,通常需要倒序排
+	 * @see java.lang.Comparable#compareTo(java.lang.Object)
+	 */
+	@Override
+	public int compareTo(WallPic o){
+		//topId越小越排前,addTime越后越排前
+		if (this.topId != o.getTopId()) {
+			return this.topId - o.getTopId();
+		}
+//		SimpleDateFormat df = new SimpleDateFormat();
+//		int re = 0;
+//		try {
+//			Date me = df.parse(this.addTime);
+//			Date you = df.parse(o.getAddTime());
+//			if(!me.equals(you)){
+//				re = (me.after(you))? 1 : -1;
+//			}
+//		} catch (ParseException e) {
+//			e.printStackTrace();
+//		}
+		return (this.getAddTime() < o.getAddTime())?-1:1;
 	}
 	
 	

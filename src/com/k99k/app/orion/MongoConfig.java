@@ -123,9 +123,13 @@ public class MongoConfig {
 	
 	/**
 	 * 根据当前的分类创建pic对象
+	 * @param catePre
+	 * @param picMax
+	 * @param ifClear
+	 * @param topId
 	 * @return
 	 */
-	boolean createPicFromCate(String catePre,int picMax){
+	boolean createPicFromCate(String catePre,int picMax,boolean ifClear,int topId){
 		//
 		String pathPre = "/orion/";
 		try {
@@ -135,7 +139,10 @@ public class MongoConfig {
 			}
 			DBCollection piccoll = db.getCollection("wallPic");
 
-			piccoll.remove(new BasicDBObject("cate",catePre));
+			if (ifClear) {
+				piccoll.remove(new BasicDBObject("cate",catePre));
+			}
+			
 			
         	System.out.println("--------cate:"+catePre+ " max:"+picMax);
         	for (int i = 0; i <picMax; i++) {
@@ -161,7 +168,7 @@ public class MongoConfig {
         		pic.put("cate", catePre);
         		pic.put("info", "");
         		pic.put("state", 1);//0为未发布状态,1为正常发布状态,2为新发布或其他含义
-        		pic.put("topId", 0);//用于置顶排序等
+        		pic.put("topId", topId);//用于置顶排序等
         		/*
         		//加星后如下
         		"starInfo":[
@@ -313,9 +320,14 @@ public class MongoConfig {
 	 * @param en
 	 * @param jp
 	 * @param tw
+	 * @param sub
+	 * @param info
+	 * @param style
+	 * @param state
+	 * @param sortId
 	 * @return
 	 */
-	boolean createCate(int maxId,String name,String pre,String cn,String en,String jp,String tw,String sub,String info,String style,int state){
+	boolean createCate(int maxId,String name,String pre,String cn,String en,String jp,String tw,String sub,String info,String style,int state,int sortId){
 		try {
 			if (!this.getDB()) {
 				System.out.println("error:getDB");
@@ -335,6 +347,8 @@ public class MongoConfig {
 			doc.put("info", info);
 			doc.put("style", style);
 			doc.put("state", state);
+			doc.put("sortId", sortId);
+			
 			DBObject time = new BasicDBObject("addTime", new Date());
 			doc.putAll(time);
 			coll.insert(doc);
@@ -434,13 +448,87 @@ public class MongoConfig {
 		return true;
 		
 	}
+//	
+//	void trans(){
+//		try {
+////			Mongo mongo1 = new Mongo("202.102.113.204" , 27017 );
+////			DB db1 = mongo1.getDB("fwall");
+////			boolean auth = db1.authenticate("sikewall009", "6667441".toCharArray());
+////			if (auth) {
+////				System.out.println("db1 created OK.");
+////			}
+//			Mongo mongo2 = new Mongo("202.102.40.43" , 27017 );
+//			DB db2 = mongo2.getDB("fwall");
+//			boolean auth2 = db2.authenticate("sikewall009", "6667441".toCharArray());
+//			if (auth2) {
+//				System.out.println("db2 created OK.");
+//			}
+////			DBCollection coll = db1.getCollection("wallPic");
+//			DBCollection coll2 = db2.getCollection("wallPic");
+//			
+//			BasicDBObject pic = new BasicDBObject();
+//    		pic.put("picId", 219);//自然数序列号
+//    		String pathPre = "/orion/";
+//    		String catePre = "car";
+//    		BasicBSONList paths = new BasicBSONList();
+//    		paths.put("0", pathPre+catePre+"/"+catePre+219+".jpg");
+//    		paths.put("1", pathPre+catePre+"/"+catePre+219+"_l.jpg");
+//    		paths.put("2", pathPre+catePre+"/b_"+catePre+219+".jpg");
+//    		paths.put("3", pathPre+catePre+"/b_"+catePre+219+"_l.jpg");
+//    		pic.put("picPath", paths);
+//    		pic.put("picSource", "");
+//    		pic.put("picName", catePre+"#"+219);//后期可以是真正的名称
+////        		DBObject time = new BasicDBObject("addTime", new Date());
+////    			pic.putAll(time);
+//    		Calendar c = Calendar.getInstance();
+//    		c.set(Calendar.YEAR, 2010);
+//    		c.set(Calendar.MONTH, 8);
+//    		c.set(Calendar.DATE, 8);
+//			pic.put("addTime", c.getTime());
+//    		pic.put("click", 0);
+//    		pic.put("download", 550);
+//    		pic.put("setWall", 0);
+//    		pic.put("stars", 0);
+//    		pic.put("starInfo", new BasicDBList());
+//    		pic.put("cate", catePre);
+//    		pic.put("info", "");
+//    		pic.put("state", 1);//0为未发布状态,1为正常发布状态,2为新发布或其他含义
+//    		pic.put("topId", 1);//用于置顶排序等
+//    		coll2.save(pic);
+//			//先删除
+////			coll2.remove(new BasicDBObject("cate","car"));
+//			//再加入
+////			DBCursor cur1 = coll.find(new BasicDBObject("cate","car"));
+////			while (cur1.hasNext()) {
+////				DBObject dbobj = (DBObject) cur1.next();
+////				
+////				coll2.save(dbobj);
+////				System.out.println(dbobj);
+////				System.out.println("=========");
+////			}
+//			
+//			System.out.println("Done!");
+//		} catch (UnknownHostException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (MongoException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		
+//		
+//	}
 
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		
-		MongoConfig t = new MongoConfig();
+		//MongoConfig t = new MongoConfig();
+		//t.createCate(36, "Japan Earthquake & Tsunami", "japan", "日本大地震和海啸", "Japan Earthquake & Tsunami", "東日本巨大地震&津波", "日本大地震和海嘯","","","",1,9);
+		//t.createPicFromCate("japan2",219);
+		
+		//t.trans();
 		//t.createWallConfig();
 		//t.testConfig();
 //创建类别
@@ -476,7 +564,7 @@ public class MongoConfig {
 //		t.testIndex();
 		
 //		t.createPicFromCate("car",208);
-		t.mongo.close();
+		//t.mongo.close();
 	}
 
 }

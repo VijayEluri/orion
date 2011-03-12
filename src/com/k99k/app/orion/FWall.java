@@ -3,10 +3,14 @@
  */
 package com.k99k.app.orion;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
@@ -71,14 +75,35 @@ public class FWall implements Runnable {
 	private HashMap<String,WallPic> objIdMap = new HashMap<String, WallPic>(5000);
 	
 	/**
+	 * 用于排序的 picList
+	 */
+	private ArrayList<WallPic> picList;
+	
+	/**
+	 * 用于排序的cateList
+	 */
+	private ArrayList<WallCate> cateList;
+	/**
 	 * 登录所获取的配置文件,为空String时重定向到fw_index.htm文件
 	 */
 	private String wallconfig = "";
 	
 	/**
+	 * 准备生成的config
+	 */
+	private String preConfig = "";
+	
+	/**
 	 * 非中国服务器的wallconfig
 	 */
 	private String wallconfig_us = "";
+	
+	/**
+	 * 缓存文件路径
+	 */
+	private String cacheIniPath = "";
+	private String cacheIniPath_us = "";
+	
 	
 	/**
 	 * 任务列表
@@ -237,7 +262,7 @@ public class FWall implements Runnable {
 		if (w != null) {
 //			String[] arr =  this.picCateMap.get(w.getCate()+"#time").get(w.getPicId());
 //			return arr[picType+1];
-			String[] arr =  new String[]{oid,w.getPicPath()[picType]};
+			String[] arr =  new String[]{oid,w.getPicPath()[picType+1]};
 			return arr;
 		}
 		return null;
@@ -388,6 +413,11 @@ public class FWall implements Runnable {
 			return false;
 		}
 		try {
+			//更新objIdMap缓存的图片加星数
+			if (objIdMap != null) {
+				WallPic pic = this.objIdMap.get(picOid);
+				pic.setStars(pic.getStars()+1);
+			}
 			
 			
 			//更新wallUser表
@@ -405,21 +435,12 @@ public class FWall implements Runnable {
 				coll.update(q, set);
 			}
 			
-			
-			
-			
 			//更新wallPic的加星数
-//			ObjectId oid = new ObjectId((String)objIdMap.get(cate+"#"+picId));
-//			if (oid!=null) {
-				coll = mongoCol.getColl("wallPic");
-				q = new BasicDBObject("_id",new ObjectId(picOid));
-				BasicDBObject set = new BasicDBObject("$push",new BasicDBObject("starInfo",new BasicDBObject("imei",imei).append("msg", "").append("good", 0).append("bad", 0)));
-				set.append("$inc", new BasicDBObject("stars",1));
-				coll.update(q, set);
-//			}else{
-//				System.out.println("--add--ObjectId can not found, cate:"+cate+" picId:"+picId);
-//			}
-		
+			coll = mongoCol.getColl("wallPic");
+			q = new BasicDBObject("_id",new ObjectId(picOid));
+			BasicDBObject set = new BasicDBObject("$push",new BasicDBObject("starInfo",new BasicDBObject("imei",imei).append("msg", "").append("good", 0).append("bad", 0)));
+			set.append("$inc", new BasicDBObject("stars",1));
+			coll.update(q, set);
 		} catch (Exception e) {
 			System.out.println("------"+new Date());e.printStackTrace();
 			return false;
@@ -495,17 +516,18 @@ public class FWall implements Runnable {
 		}
 		try {
 			
+			//更新objIdMap缓存的图片加星数
+			if ( this.objIdMap != null) {
+				WallPic pic = this.objIdMap.get(picOid);
+				pic.setDownload(pic.getDownload()+1);
+			}
+			
+			
 			DBCollection coll = mongoCol.getColl("wallPic");
 			ObjectId oid = new ObjectId(picOid);
-//			ObjectId oid = new ObjectId((String)objIdMap.get(cate+"#"+picId));
-//			if (oid != null) {
-				BasicDBObject q = new BasicDBObject("_id",oid);
-				BasicDBObject set = new BasicDBObject("$inc",new BasicDBObject("download",1));
-				coll.update(q, set);
-//			}else{
-//				System.out.println("--addDownload--ObjectId can not found, cate:"+cate+" picId:"+picId);
-//			}
-			
+			BasicDBObject q = new BasicDBObject("_id",oid);
+			BasicDBObject set = new BasicDBObject("$inc",new BasicDBObject("download",1));
+			coll.update(q, set);
 			
 		} catch (Exception e) {
 			System.out.println("picOid:"+picOid);
@@ -652,6 +674,8 @@ public class FWall implements Runnable {
 	/**
 	 * 读取配置文件,一般是/WEB-INF/fw_ini.json
 	 * @param iniFile json形式
+	 * @param cacheIni 缓存
+	 * @param cacheIniUS 非中文缓存
 	 * @return 是否读取成功
 	 */
 	@SuppressWarnings("unchecked")
@@ -670,11 +694,23 @@ public class FWall implements Runnable {
 			this.dayUpdateHour = Integer.parseInt(ini.get("dayUpdateHour").toString());
 			this.newPicsOneDay = Integer.parseInt(ini.get("newPicsOneDay").toString());
 			this.indexJsonPath = iniFile.substring(0,iniFile.lastIndexOf("/")+1)+ini.get("fwIndex").toString();
+			this.cacheIniPath = iniFile.substring(0,iniFile.lastIndexOf("/")+1)+ini.get("cacheIniPath").toString();
+			this.cacheIniPath_us = iniFile.substring(0,iniFile.lastIndexOf("/")+1)+ini.get("cacheIniPath_us").toString();
 			
+			System.out.println("cacheIniPath:"+cacheIniPath);
 			
 			//读取索引配置文件
-			this.wallconfig = IO.readTxt(this.indexJsonPath, "UTF-8");
+			this.preConfig = IO.readTxt(this.indexJsonPath, "UTF-8");
 			System.out.println("indexJsonPath:"+indexJsonPath);
+			String ci = IO.readTxt(this.cacheIniPath, "utf-8");
+			String cius = IO.readTxt(this.cacheIniPath_us, "utf-8");
+			if (ci == null || cius == null || ci.length()<10 || cius.length()<10) {
+				System.out.println("cache file error. skiped...");
+			}else{
+				this.wallconfig = ci;
+				this.wallconfig_us = cius;
+			}
+			
 			
 			//数据库配置
 			Map<String,String> mongoIni = (Map<String, String>) ini.get("mongo");
@@ -699,56 +735,79 @@ public class FWall implements Runnable {
 		return true;
 	}
 	
+	final void exit(){
+		try {
+			IO.writeTxt(this.wallconfig, "utf-8", this.cacheIniPath);
+			IO.writeTxt(this.wallconfig_us, "utf-8", this.cacheIniPath_us);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		this.setRun(false);
+		
+	}
+	
+	/**
+	 * 初始化
+	 * @return
+	 */
 	final boolean init(){
 		this.pause = true;
 		try {
-			
-			
-			//读取数据库生成配置文件
-			//DBCollection coll = mongoCol.getColl("wallConfig");
+			//用于生成最新图的ArrayList
+			this.picList = new ArrayList<WallPic>();
 			DBCollection picColl = mongoCol.getColl("wallPic");
+			//生成oid:WallPic缓存
+			DBCursor ccur = picColl.find();
+			int ii = 0;
+			while (ccur.hasNext()) {
+				DBObject o = ccur.next();
+				String oid = ((ObjectId) (o.get("_id"))).toString();
+				WallPic pic = new WallPic();
+				pic.set_id(oid);
+				pic.setAddTime(((Date)o.get("addTime")).getTime());
+				pic.setCate((String)o.get("cate"));
+				pic.setClick((Integer)o.get("click"));
+				pic.setDownload((Integer)o.get("download"));
+				pic.setInfo((String)o.get("info"));
+				pic.setPicId((Integer)o.get("picId"));
+				pic.setPicName((String)o.get("picName"));
+				BasicBSONList parr = (BasicBSONList)o.get("picPath");
+				//这里将第一个path放置oid的String
+				int size = parr.size();
+				String[] pathArr = new String[size+1];
+				pathArr[0] = oid;
+				for (int j = 0; j < size; j++) {
+					pathArr[j+1] = (String) parr.get(j);
+				}
+//				int size = parr.size();
+//				String[] paths = new String[size];
+//				for (int j = 0; j < size; j++) {
+//					paths[j] = (String) parr.get(j);
+//				}
+				pic.setPicPath(pathArr);
+				pic.setPicSource((String)o.get("picSource"));
+				pic.setSetWall((Integer)o.get("setWall"));
+				pic.setStars((Integer)o.get("stars"));
+				pic.setState((Integer)o.get("state"));
+				pic.setTopId((Integer)o.get("topId"));
+				objIdMap.put(oid,pic);
+				if (pic.getState() == 1) {
+					picList.add(pic);
+				}
+				ii++;
+				if (ii%300 == 0) {
+					System.out.println("objIdMap building:"+ii);
+				}
+			}
+			System.out.println("objIdMap built:"+ii);
+			System.out.println("picList built:"+picList.size());
+			
+			//-----------------------------------------------------------------------------------
+			
+			
 			//DBCursor cur = coll.find();
 			//先由配置文件转换到DBObject
-			DBObject config = (DBObject) JSON.parse(this.wallconfig);
-			
-			//生成前50页最新图的列表
-			DBCursor newCur = picColl.find(new BasicDBObject("topId",1).append("state", 1)).sort(new BasicDBObject("addTime",-1)).limit(60*4);
-			int i = 0;
-			BasicBSONList index = new BasicBSONList();
-			BasicBSONList pics = new BasicBSONList();//(BasicBSONList)(((BasicDBObject)((BasicBSONList)config.get("index")).get(0)).get("pics"));
-			//pics.clear();
-			BasicBSONList pageIndex = new BasicBSONList();
-			while (newCur.hasNext()) {
-				DBObject newobj = newCur.next();
-				//使用cate+#+picId
-				String s = (String)newobj.get("cate")+"#"+(Integer) newobj.get("picId");
-				pageIndex.put(i, s);
-				if (i == 3) {
-					i = 0;
-					//j为新增的页数
-					//j++;
-					//加到数组末尾
-					pics.add(pageIndex);
-//						System.out.println(pageIndex);
-					pageIndex = new BasicBSONList();
-					
-
-				}else{
-					i++;
-				}
-				
-			}
-			//index中的第一个位置加入最新节点
-			BasicDBObject picsNode = new BasicDBObject();
-			picsNode.put("cate", "Newest");
-			picsNode.put("cateCN", "最新");
-			picsNode.put("cateEN", "Newest");
-			picsNode.put("cateJP", "最新");
-			picsNode.put("cateTW", "最新");
-			picsNode.put("pics", pics);
-			index.put("0", picsNode);
-			
-			
+			DBObject config = (DBObject) JSON.parse(this.preConfig);
 			
 			//更新config的最新更新时间
 			DBCollection coll_day = mongoCol.getColl("wallDay");
@@ -763,23 +822,156 @@ public class FWall implements Runnable {
 			updateConfigTime(config,"updateEN",lastUpdateTime);
 			updateConfigTime(config,"updateJP",lastUpdateTime);
 			updateConfigTime(config,"updateTW",lastUpdateTime);
-//			this.wallconfig = config.toString();
-//				System.out.println(wallconfig);
-		//}else{
-			//this.wallconfig = "";
-			//System.out.println("=========Error init!=========");
-//			return false;
-		//}
-		
+
+			//-----------------------------------------------------------------------------------
+			
+			
+			//从数据库读取类别
+			DBCollection cateColl = mongoCol.getColl("wallCate");
+			DBCursor cur = cateColl.find(new BasicDBObject("state",1)).sort(new BasicDBObject("sortId",1));
+			//载入所有的cate
+			this.cateList = new ArrayList<WallCate>();
+			while (cur.hasNext()) {
+				DBObject o = cur.next();
+				//String cate = (String) o.get("cateName");
+				String catePre = (String) o.get("catePre");
+				String cateName = (String)o.get("cateName");
+				String cateCN = (String)o.get("cn");
+				String cateEN = (String)o.get("en");
+				String cateJP = (String)o.get("jp");
+				String cateTW = (String)o.get("tw");
+				long addTime = ((Date)o.get("addTime")).getTime();
+				String cateSub = o.get("sub").toString();
+				String cateStyle = o.get("style").toString();
+				int maxPic = Integer.parseInt(o.get("max").toString());
+				WallCate cate = new WallCate();
+				cate.setAddTime(addTime);
+				cate.setCateName(cateName);
+				cate.setCn(cateCN);
+				cate.setEn(cateEN);
+				cate.setJp(cateJP);
+				cate.setTw(cateTW);
+				cate.setInfo(o.get("info").toString());
+				cate.setCatePre(catePre);
+				cate.setSub(cateSub);
+				cate.setStyle(cateStyle);
+				cate.setSortId(Integer.parseInt(o.get("sortId").toString()));
+				cate.setMax(maxPic);
+				//state均为1
+				cate.setState(1);
+				cateList.add(cate);
+			}
+			System.out.println("=======wallCate fromDB loaded========");
+			
+			//-----------------------------------------------------------------------------------
+			
+			//按topId和addTime倒序排
+			Collections.sort(picList, Collections.reverseOrder());
+			
+			//生成前50页最新图的列表
+			//DBCursor newCur = picColl.find(new BasicDBObject("topId",1).append("state", 1)).sort(new BasicDBObject("addTime",-1)).limit(60*4);
+			//索引中的index节点
+			BasicBSONList index = new BasicBSONList();
+			//最新中的pics节点
+			BasicBSONList pics = new BasicBSONList();
+			//每一页的图片数组
+			BasicBSONList pageIndex = new BasicBSONList();
+			
+			//前60页,i为每页的计数点,p为页数
+			int i = 0,p = 1;
+			for (Iterator<WallPic> it = picList.iterator(); it.hasNext();) {
+				WallPic pic = it.next();
+				pageIndex.put(i, pic.getCate()+"#"+pic.getPicId());
+				if (i == 3) {
+					i = 0;
+					pics.add(pageIndex);
+					pageIndex = new BasicBSONList();
+					p++;
+				}else{
+					i++;
+				}
+				if (p > 60) {
+					break;
+				}
+			}
+			
+//			while (newCur.hasNext()) {
+//				DBObject newobj = newCur.next();
+//				//使用cate+#+picId
+//				String s = (String)newobj.get("cate")+"#"+(Integer) newobj.get("picId");
+//				pageIndex.put(i, s);
+//				if (i == 3) {
+//					i = 0;
+//					//j为新增的页数
+//					//j++;
+//					//加到数组末尾
+//					pics.add(pageIndex);
+//					pageIndex = new BasicBSONList();
+//				}else{
+//					i++;
+//				}
+//				
+//			}
+			//index中的第一个位置加入最新节点
+			BasicDBObject picsNode = new BasicDBObject();
+			picsNode.put("cate", "Newest");
+			picsNode.put("cateCN", "最新");
+			picsNode.put("cateEN", "Newest");
+			picsNode.put("cateJP", "最新");
+			picsNode.put("cateTW", "最新");
+			picsNode.put("pics", pics);
+			index.put("0", picsNode);
+			
+			//-----------------------------------------------------------------------------------
 	
 			
-			//读取所有图片生成各种排序的图片映射
-			DBCollection cateColl = mongoCol.getColl("wallCate");
-//			DBCollection picColl = mongoCol.getColl("wallPic");
-			DBCursor cur = cateColl.find(new BasicDBObject("state",1)).sort(new BasicDBObject("sortId",1));
+			
 			//用于生成排序索引mMap
 			HashMap<String,ArrayList<String[]>> mMap = new HashMap<String, ArrayList<String[]>>(100);
 			HashMap<String,Integer> ccMap = new HashMap<String, Integer>();
+			
+			for (Iterator<WallCate> it = cateList.iterator(); it.hasNext();) {
+				WallCate cate = it.next();
+				//生成该类的节点
+				DBObject cateNode = new BasicDBObject();
+				cateNode.put("cate", cate.getCateName());
+				cateNode.put("picPre", cate.getCatePre());
+				cateNode.put("cateCN", cate.getCn());
+				cateNode.put("cateEN", cate.getEn());
+				cateNode.put("cateJP", cate.getJp());
+				cateNode.put("cateTW", cate.getTw());
+				cateNode.put("maxPic", cate.getMax());
+				cateNode.put("sub", cate.getSub());
+				cateNode.put("style", cate.getStyle());
+				index.add(cateNode);
+				//以时间为序
+//				Collections.sort(picList, Collections.reverseOrder());
+				Collections.sort(picList);
+				ArrayList<String[]> timeList =readListFromPicList(cate.getCatePre(),picList);
+				if (timeList.size() > 0) {
+					mMap.put(cate.getCatePre()+"#time", timeList);
+				}
+				//以下载量为序
+//				Comparator<WallPic> downDescComparator = Collections.reverseOrder(new picDownComparator());
+				Collections.sort(picList, new picDownComparator());
+				ArrayList<String[]> downList = readListFromPicList(cate.getCatePre(),picList);
+				if (downList.size() > 0) {
+					mMap.put(cate.getCatePre()+"#down", timeList);
+				}
+				//以加星量为序 ,需要定期更新索引
+//				Comparator<WallPic> starDescComparator = Collections.reverseOrder(new picStarComparator());
+				Collections.sort(picList, new picStarComparator());
+				ArrayList<String[]> starList = readListFromPicList(cate.getCatePre(),picList);
+				if (starList.size() > 0) {
+					mMap.put(cate.getCatePre()+"#star", starList);
+				}
+				ccMap.put(cate.getCatePre(), timeList.size());
+				System.out.println(cate.getCatePre()+":"+timeList.size());
+				
+			}
+			
+			/*
+			
 			while (cur.hasNext()) {
 				DBObject o = cur.next();
 				//String cate = (String) o.get("cateName");
@@ -837,7 +1029,9 @@ public class FWall implements Runnable {
 //				System.out.println(catePre+"#star:"+starList.size());
 				ccMap.put(catePre, timeList.size());
 				System.out.println(catePre+":"+timeList.size());
-			}
+			}*/
+			
+			
 			//汇总并更新picCateMap
 			if (mMap.size()>0) {
 				this.picCateMap = mMap;
@@ -858,41 +1052,7 @@ public class FWall implements Runnable {
 			}
 			this.wallconfig_us = config.toString();
 			System.out.println("wallconfig_us built.");
-			//生成oid:WallPic缓存
-			//DBCursor ccur = picColl.find(new BasicDBObject("state",1)).sort(new BasicDBObject("picId",1));
-			DBCursor ccur = picColl.find();
-			int ii = 0;
-			while (ccur.hasNext()) {
-				DBObject o = ccur.next();
-				String oid = ((ObjectId) (o.get("_id"))).toString();
-				WallPic pic = new WallPic();
-				pic.set_id(oid);
-				pic.setAddTime(o.get("addTime").toString());
-				pic.setCate((String)o.get("cate"));
-				pic.setClick((Integer)o.get("click"));
-				pic.setDownload((Integer)o.get("download"));
-				pic.setInfo((String)o.get("info"));
-				pic.setPicId((Integer)o.get("picId"));
-				pic.setPicName((String)o.get("picName"));
-				BasicBSONList parr = (BasicBSONList)o.get("picPath");
-				int size = parr.size();
-				String[] paths = new String[size];
-				for (int j = 0; j < size; j++) {
-					paths[j] = (String) parr.get(j);
-				}
-				pic.setPicPath(paths);
-				pic.setPicSource((String)o.get("picSource"));
-				pic.setSetWall((Integer)o.get("setWall"));
-				pic.setStars((Integer)o.get("stars"));
-				pic.setState((Integer)o.get("state"));
-				pic.setTopId((Integer)o.get("topId"));
-				objIdMap.put(oid,pic);
-				ii++;
-//				if (ii%50 == 0) {
-//					System.out.println("objIdMap building:"+ii);
-//				}
-			}
-			System.out.println("objIdMap built:"+ii);
+			
 			this.checkReIndexTime();
 			//获取下次日更新时间
 			this.nextUpdateTime = this.getNextDayUpdateTime();
@@ -911,6 +1071,30 @@ public class FWall implements Runnable {
 	}
 	
 	
+	/**
+	 * 图片下载量排序器
+	 * @author keel
+	 *
+	 */
+	class picDownComparator implements Comparator<WallPic> {
+
+		public int compare(WallPic w1, WallPic w2) {
+			return w1.getDownload() - w2.getDownload();
+		}
+	}
+	
+	/**
+	 * 图片加星量排序器
+	 * @author keel
+	 *
+	 */
+	class picStarComparator implements Comparator<WallPic> {
+
+		public int compare(WallPic w1, WallPic w2) {
+			return w1.getStars() - w2.getStars();
+		}
+	}
+	
 	private final void checkReIndexTime(){
 		Calendar c = Calendar.getInstance(timeZone);
 		c.add(Calendar.SECOND, this.starSleep);
@@ -922,38 +1106,57 @@ public class FWall implements Runnable {
 			//处理加星
 			if (hasNewStar) {
 				this.hasNewStar = false;
-				this.reIndex("stars", "star",true);
+				this.reIndex("star");
 			}
 			//处理下载
-			this.reIndex("download", "down",true);
+			this.reIndex("down");
 			this.checkReIndexTime();
 		}
 	}
 	
-	private final void reIndex(String orderby,String tag,boolean asc){
+	private final void reIndex(String tag){
 		try {
-			DBCollection picColl = mongoCol.getColl("wallPic");
-			DBCollection cateColl = mongoCol.getColl("wallCate");
-			DBCursor cur = cateColl.find(new BasicDBObject("state",1));
-			int sort = -1;
-			if (asc) {
-				sort = 1;
-			}
-			while (cur.hasNext()) {
-				DBObject o = cur.next();
-				String catePre = (String) o.get("catePre");
-				//以加星量为序 
-				DBCursor pcur = picColl.find(new BasicDBObject("cate",catePre).append("state", 1)).sort(new BasicDBObject(orderby,sort).append("picId", -1));
-				ArrayList<String[]> starList = this.readListFromColl(pcur);
-				if (starList.size() > 0) {
-					this.picCateMap.put(catePre+"#"+tag, starList);
+//			DBCollection picColl = mongoCol.getColl("wallPic");
+//			DBCollection cateColl = mongoCol.getColl("wallCate");
+//			DBCursor cur = cateColl.find(new BasicDBObject("state",1));
+//			int sort = -1;
+//			if (asc) {
+//				sort = 1;
+//			}
+//			while (cur.hasNext()) {
+//				DBObject o = cur.next();
+//				String catePre = (String) o.get("catePre");
+//				//以加星量为序 
+//				DBCursor pcur = picColl.find(new BasicDBObject("cate",catePre).append("state", 1)).sort(new BasicDBObject(orderby,sort).append("picId", -1));
+//				ArrayList<String[]> starList = this.readListFromColl(pcur);
+//				if (starList.size() > 0) {
+//					this.picCateMap.put(catePre+"#"+tag, starList);
+//				}
+//			}
+			//System.out.println("=======reIndexStar OK!=========");
+			for (Iterator<WallCate> it = this.cateList.iterator(); it.hasNext();) {
+				WallCate cate = it.next();
+				//以下载量为序
+				if (tag.equals("down")) {
+//					Comparator<WallPic> downDescComparator = Collections.reverseOrder(new picDownComparator());
+					Collections.sort(picList, new picDownComparator());
+					ArrayList<String[]> downList = readListFromPicList(cate.getCatePre(),picList);
+					if (downList.size() > 0) {
+						this.picCateMap.put(cate.getCatePre()+"#"+tag, downList);
+					}
+				}else if (tag.equals("star")){
+//					Comparator<WallPic> starDescComparator = Collections.reverseOrder(new picStarComparator());
+					Collections.sort(picList, new picStarComparator());
+					ArrayList<String[]> starList = readListFromPicList(cate.getCatePre(),picList);
+					if (starList.size() > 0) {
+						this.picCateMap.put(cate.getCatePre()+"#"+tag, starList);
+					}
 				}
 			}
-			//System.out.println("=======reIndexStar OK!=========");
-			
 		} catch (Exception e) {
-			System.out.println("=======reIndexStar ERROR:"+orderby);
-			System.out.println("------"+new Date());e.printStackTrace();
+			System.out.println("=======reIndex ERROR:"+tag);
+			System.out.println("------"+new Date());
+			e.printStackTrace();
 		}
 	}
 	
@@ -980,22 +1183,40 @@ public class FWall implements Runnable {
 //		}
 //	}
 	
-	private final ArrayList<String[]> readListFromColl(DBCursor pcur){
-		ArrayList<String[]> cateList = new ArrayList<String[]>(2000);
-		while (pcur.hasNext()) {
-			DBObject o = pcur.next();
-			BasicBSONList paths = (BasicBSONList)o.get("picPath");
-			String oid = ((ObjectId) o.get("_id")).toString();
-			
-			//第一个位置给ObjectId
-			int size = paths.size();
-			String[] pathArr = new String[size+1];
-			pathArr[0] = oid;
-			for (int i = 0; i < size; i++) {
-				pathArr[i+1] = (String) paths.get(i);
+//	private final ArrayList<String[]> readListFromColl(DBCursor pcur){
+//		ArrayList<String[]> cateList = new ArrayList<String[]>(2000);
+//		while (pcur.hasNext()) {
+//			DBObject o = pcur.next();
+//			BasicBSONList paths = (BasicBSONList)o.get("picPath");
+//			String oid = ((ObjectId) o.get("_id")).toString();
+//			
+//			//第一个位置给ObjectId
+//			int size = paths.size();
+//			String[] pathArr = new String[size+1];
+//			pathArr[0] = oid;
+//			for (int i = 0; i < size; i++) {
+//				pathArr[i+1] = (String) paths.get(i);
+//			}
+//			cateList.add(pathArr);
+//		}
+//		return cateList;
+//	}
+	
+	/**
+	 * 读取对应类别的paths
+	 * @param catePre
+	 * @param picList ArrayList<WallPic>
+	 * @return
+	 */
+	private final ArrayList<String[]> readListFromPicList(String catePre,ArrayList<WallPic> picList){
+		ArrayList<String[]> cateList = new ArrayList<String[]>(3000);
+		for (Iterator<WallPic> it = picList.iterator(); it.hasNext();) {
+			WallPic pic = it.next();
+			if (pic.getCate().equals(catePre)) {
+				cateList.add(pic.getPicPath());
 			}
-			cateList.add(pathArr);
 		}
+		
 		return cateList;
 	}
 	
@@ -1336,7 +1557,6 @@ public class FWall implements Runnable {
 	public static void main(String[] args) {
 		FWall f = new FWall("f:/works/workspace_keel/orion/WebContent/WEB-INF/fw_ini.json");
 		f.mongoCol.setIp("202.102.40.43");
-		
 		/*
 		DBCollection coll_cate = f.mongoCol.getColl("wallCate");
 		
@@ -1386,14 +1606,11 @@ public class FWall implements Runnable {
 //		f.init();
 //		System.out.println(f.wallconfig);
 		
+//		DBCollection coll_cate = f.mongoCol.getColl("wallCate");
+//		coll_cate.update(new BasicDBObject("catePre","japan"), new BasicDBObject("$set",new BasicDBObject("state",0)));
 		
-		
-//		DBCollection coll_pic = mongoCol.getColl("wallPic");
-//		DBCursor cur = coll_pic.find(new BasicDBObject("topId",1)).sort((new BasicDBObject("cate",1)).append("picId",1)).limit(f.newPicsOneDay);
-//		while (cur.hasNext()) {
-//			DBObject dbo = (DBObject) cur.next();
-//			System.out.println(dbo.get("cate")+" "+dbo.get("picId"));
-//		}
+//		DBCollection coll_pic = f.mongoCol.getColl("wallPic");
+//		coll_pic.remove(new BasicDBObject("cate","japan"));
 		
 		
 //		f.init();
@@ -1421,7 +1638,6 @@ public class FWall implements Runnable {
 //			c.set(Calendar.HOUR_OF_DAY, 12);
 //			c.set(Calendar.MINUTE, 00);
 //			//c.add(Calendar.DATE, 1);
-//			//o.put("nextUpdateTime", c.getTime());
 //			o.put("nextUpdateTime", c.getTime());
 //			o.put("lastUpdate",new Date());
 //			coll.update(new BasicDBObject("id",1), o);
