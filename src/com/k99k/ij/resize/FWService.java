@@ -548,6 +548,7 @@ public class FWService implements Runnable {
 		runFlag = this.init();
 		int re = 0;
 		while (runFlag) {
+			re = 0;
 			//每次只查找一个任务
 			int t = this.checkTask();
 			switch (t) {
