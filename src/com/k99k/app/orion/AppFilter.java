@@ -71,7 +71,7 @@ public class AppFilter implements Filter {
 		HashMap<String, String> m = new HashMap<String, String>();
 		m.put("CN", "CN");
 		m.put("TW", "TW");
-		m.put("JP", "JP");
+		//m.put("JP", "JP");
 		return m;
 	}
 
