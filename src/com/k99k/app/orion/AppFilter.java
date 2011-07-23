@@ -96,7 +96,6 @@ public class AppFilter implements Filter {
 //		   sb.append(req.getHeader(item)).append("\n");
 //		}
 //		System.out.println(sb);
-		
 		resp.setHeader("obj_id", "objectId");
 		
 		String url = req.getRequestURI();
@@ -268,51 +267,56 @@ public class AppFilter implements Filter {
 		
 		//-----------------------------------
 		if (url.indexOf(".jpg")>0) {
-			//由pic_oid直接到真实path,路径中的图片名以_或b__开头，后接objectId
-			String picFileName = url.substring(url.lastIndexOf("/")+1,url.lastIndexOf("."));
-			if (picFileName.charAt(0) == '_' || picFileName.charAt(2) == '_') {
-				String[] picArr = fwall.getPicPathByOid(picFileName);
-				if (picArr == null || picArr.length < 2) {
-					System.out.println("getPicPathByOid failed:"+url);
-					chain.doFilter(request, response);
+			
+			try {
+				//由pic_oid直接到真实path,路径中的图片名以_或b__开头，后接objectId
+				String picFileName = url.substring(url.lastIndexOf("/")+1,url.lastIndexOf("."));
+				if (picFileName.charAt(0) == '_' || picFileName.charAt(2) == '_') {
+					String[] picArr = fwall.getPicPathByOid(picFileName);
+					if (picArr == null || picArr.length < 2) {
+						System.out.println("getPicPathByOid failed:"+url);
+						chain.doFilter(request, response);
+						return;
+					}
+					resp.setHeader("pic_oid", picArr[0]);
+					RequestDispatcher dispatcher = req.getRequestDispatcher(picArr[1]);
+					dispatcher.forward(request, resp);
 					return;
 				}
-				resp.setHeader("pic_oid", picArr[0]);
-				RequestDispatcher dispatcher = req.getRequestDispatcher(picArr[1]);
-				dispatcher.forward(request, resp);
-				return;
-			}
-			String sortBy = "time";
-			String sortType = "0";
+				String sortBy = "time";
+				String sortType = "0";
 //			System.out.println("====test imei========:"+req.getHeader("imei"));
 //			if (req.getParameter("wall")!= null && req.getParameter("sortBy")!= null && req.getParameter("sortType")!= null) {
 //				sortBy = req.getParameter("sortBy");
 //				sortType = req.getParameter("sortType");
 //				
 //			}else{
-			//处理图片重定向
-				sortBy = (req.getHeader("sortBy") == null)?"time":req.getHeader("sortBy");
-				sortType = (req.getHeader("sortType") == null || (!req.getHeader("sortType").matches("\\d+"))) ? "0" : req.getHeader("sortType");
+				//处理图片重定向
+					sortBy = (req.getHeader("sortBy") == null)?"time":req.getHeader("sortBy");
+					sortType = (req.getHeader("sortType") == null || (!req.getHeader("sortType").matches("\\d+"))) ? "0" : req.getHeader("sortType");
 //			System.out.println("sortBy:"+sortBy+" sortType:"+sortType);
 //			}
-			
-			String[] toPic = fwall.getPicFromUrl(url, sortBy, Integer.parseInt(sortType));
-			if (toPic != null && toPic.length == 2) {
-				//System.out.println(toPic);
-				resp.setHeader("pic_oid", toPic[0]);
+				
+				String[] toPic = fwall.getPicFromUrl(url, sortBy, Integer.parseInt(sortType));
+				if (toPic != null && toPic.length == 2) {
+					//System.out.println(toPic);
+					resp.setHeader("pic_oid", toPic[0]);
 //				if (test) {
 //					String s = "http://202.102.113.204"+toPic[1];
 //					resp.sendRedirect(s);
 //					return;
 //				}
-				RequestDispatcher dispatcher = req.getRequestDispatcher(toPic[1]);
-				dispatcher.forward(request, resp);
-				return;
-			}else{
-				//System.out.println("ERROR URL:"+url);
-				chain.doFilter(request, response);
-				//response.getWriter().print("404");
-				return;
+					RequestDispatcher dispatcher = req.getRequestDispatcher(toPic[1]);
+					dispatcher.forward(request, resp);
+					return;
+				}else{
+					//System.out.println("ERROR URL:"+url);
+					chain.doFilter(request, response);
+					//response.getWriter().print("404");
+					return;
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
 		//-----------------------------------
@@ -523,6 +527,34 @@ public class AppFilter implements Filter {
 		}
 	}
 	
+//	/**
+//	 * 国内版下载地址的fw_ini.htm
+//	 */
+//	private static String fwini_orionapk;
+//	
+//	/**
+//	 * 国内版下载地址的fw_ini.htm
+//	 */
+//	private static String fwini_us_orionapk;
+//	
+//	
+//	private final static String fw_ini(HttpServletRequest req,String lang){
+//		//区分中英两个版本
+//		if (lang.equals("CN")) {
+//			if (CNMap.containsKey(lang)) {
+//				return fwini_orionapk;
+//			}else{
+//				return fwini_us_orionapk;
+//			}
+//		}else{
+//			if (CNMap.containsKey(lang)) {
+//				return fw_ini_html;
+//			}else{
+//				return fw_ini_html_us;
+//			}
+//		}
+//	}
+	
 	/**
 	 * @see Filter#init(FilterConfig)
 	 */
@@ -535,8 +567,17 @@ public class AppFilter implements Filter {
 		try {
 			fw_ini_html = IO.readTxt(fw_ini_path, "utf-8");
 			fw_ini_html_us = IO.readTxt(fw_ini_path_us, "utf-8");
-			} catch (IOException e) {
+//			HashMap<String, Object> m_fwini = (HashMap<String, Object>) new JSONReader().read(fw_ini_html);
+//			HashMap<String, Object> m_fwini_us = (HashMap<String, Object>) new JSONReader().read(fw_ini_html_us);
+//			m_fwini.put("newAPK", m_fwini.get("newAPK")+"?pk=com.k99k.app.orion");
+//			m_fwini_us.put("newAPK", m_fwini.get("newAPK")+"?pk=com.k99k.app.orion");
+//			fwini_orionapk = new JSONWriter().write(m_fwini);
+//			fwini_us_orionapk = new JSONWriter().write(m_fwini_us);
+		} catch (IOException e) {
+			System.out.println("fw_ini_html ERROR!"+fw_ini_html);
+			System.out.println("fw_ini_html_us ERROR!"+fw_ini_html_us);
 			e.printStackTrace();
+			
 		}
 		if (fw_ini_html.length() < 10 || fw_ini_html_us.length() < 10) {
 			System.out.println("fw_ini_html ERROR!"+fw_ini_html);

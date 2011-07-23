@@ -757,49 +757,59 @@ public class FWall implements Runnable {
 			this.picList = new ArrayList<WallPic>();
 			DBCollection picColl = mongoCol.getColl("wallPic");
 			//生成oid:WallPic缓存
-			DBCursor ccur = picColl.find();
-			int ii = 0;
-			while (ccur.hasNext()) {
-				DBObject o = ccur.next();
-				String oid = ((ObjectId) (o.get("_id"))).toString();
-				WallPic pic = new WallPic();
-				pic.set_id(oid);
-				pic.setAddTime(((Date)o.get("addTime")).getTime());
-				pic.setCate((String)o.get("cate"));
-				pic.setClick((Integer)o.get("click"));
-				pic.setDownload((Integer)o.get("download"));
-				pic.setInfo((String)o.get("info"));
-				pic.setPicId((Integer)o.get("picId"));
-				pic.setPicName((String)o.get("picName"));
-				BasicBSONList parr = (BasicBSONList)o.get("picPath");
-				//这里将第一个path放置oid的String
-				int size = parr.size();
-				String[] pathArr = new String[size+1];
-				pathArr[0] = oid;
-				for (int j = 0; j < size; j++) {
-					pathArr[j+1] = (String) parr.get(j);
+			
+			long pic_count = picColl.count();
+			int findtime = Integer.parseInt(pic_count+"")/100+1;
+			System.out.println("pic_count:"+pic_count+ " findtime:"+findtime);
+			//int ii = 0;
+			//100个一次地读取
+			for (int i = 0; i < findtime; i++) {
+				DBCursor ccur = picColl.find().sort(new BasicDBObject("_id",-1)).skip(i*100).limit(100);
+				while (ccur.hasNext()) {
+					DBObject o = ccur.next();
+					String oid = ((ObjectId) (o.get("_id"))).toString();
+					WallPic pic = new WallPic();
+					pic.set_id(oid);
+					pic.setAddTime(((Date)o.get("addTime")).getTime());
+					pic.setCate((String)o.get("cate"));
+					pic.setClick((Integer)o.get("click"));
+					pic.setDownload((Integer)o.get("download"));
+					pic.setInfo((String)o.get("info"));
+					pic.setPicId((Integer)o.get("picId"));
+					pic.setPicName((String)o.get("picName"));
+					BasicBSONList parr = (BasicBSONList)o.get("picPath");
+					//这里将第一个path放置oid的String
+					int size = parr.size();
+					String[] pathArr = new String[size+1];
+					pathArr[0] = oid;
+					for (int j = 0; j < size; j++) {
+						pathArr[j+1] = (String) parr.get(j);
+					}
+//					int size = parr.size();
+//					String[] paths = new String[size];
+//					for (int j = 0; j < size; j++) {
+//						paths[j] = (String) parr.get(j);
+//					}
+					pic.setPicPath(pathArr);
+					pic.setPicSource((String)o.get("picSource"));
+					pic.setSetWall((Integer)o.get("setWall"));
+					pic.setStars((Integer)o.get("stars"));
+					pic.setState((Integer)o.get("state"));
+					pic.setTopId((Integer)o.get("topId"));
+					objIdMap.put(oid,pic);
+					if (pic.getState() == 1) {
+						picList.add(pic);
+					}
+//					ii++;
+//					if (ii%100 == 0) {
+//						System.out.println("objIdMap building:"+ii);
+//					}
 				}
-//				int size = parr.size();
-//				String[] paths = new String[size];
-//				for (int j = 0; j < size; j++) {
-//					paths[j] = (String) parr.get(j);
-//				}
-				pic.setPicPath(pathArr);
-				pic.setPicSource((String)o.get("picSource"));
-				pic.setSetWall((Integer)o.get("setWall"));
-				pic.setStars((Integer)o.get("stars"));
-				pic.setState((Integer)o.get("state"));
-				pic.setTopId((Integer)o.get("topId"));
-				objIdMap.put(oid,pic);
-				if (pic.getState() == 1) {
-					picList.add(pic);
-				}
-				ii++;
-				if (ii%300 == 0) {
-					System.out.println("objIdMap building:"+ii);
-				}
+				System.out.println("objIdMap building:"+i);
 			}
-			System.out.println("objIdMap built:"+ii);
+			
+			
+			//System.out.println("objIdMap built:"+ii);
 			System.out.println("picList built:"+picList.size());
 			
 			//-----------------------------------------------------------------------------------
@@ -1072,6 +1082,14 @@ public class FWall implements Runnable {
 	
 	
 	/**
+	 * @return the pause
+	 */
+	public final boolean isPause() {
+		return pause;
+	}
+
+
+	/**
 	 * 图片下载量排序器
 	 * @author keel
 	 *
@@ -1286,17 +1304,21 @@ public class FWall implements Runnable {
 			while (isRun) {
 				
 				if (!pause) {
-					//执行任务
-					if (!this.taskList.isEmpty()) {
-						Map task = (Map) this.taskList.remove(0);
-						//目前只有登录请求任务，直接执行
-						this.login(task);
+					try {
+						//执行任务
+						if (!this.taskList.isEmpty()) {
+							Map task = (Map) this.taskList.remove(0);
+							//目前只有登录请求任务，直接执行
+							this.login(task);
+						}
+						
+						//处理索引更新
+						this.checkReIndex();
+						//处理每天的更新图
+						updateByDay();
+					} catch (Exception e) {
+						e.printStackTrace();
 					}
-					
-					//处理索引更新
-					this.checkReIndex();
-					//处理每天的更新图
-					updateByDay();
 				}
 			
 				//sleep暂为1秒

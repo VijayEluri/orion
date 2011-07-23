@@ -572,9 +572,11 @@ public class FWService implements Runnable {
 				if(!this.updateDB(picList)){
 					re = -2;
 				}
-				//同步ftp
-				if(!this.synFtps(tmpPath,srcPathA)){
-					re = -3;
+				if (picList != null && picList.size() > 0) {
+					//同步ftp
+					if(!this.synFtps(tmpPath,srcPathA)){
+						re = -3;
+					}
 				}
 				log.info("=========================\n");
 				break;

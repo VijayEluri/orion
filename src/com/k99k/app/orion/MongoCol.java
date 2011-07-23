@@ -21,7 +21,7 @@ import com.mongodb.ServerAddress;
  */
 public class MongoCol {
 
-	private String ip = "202.102.113.204";
+	private String ip = "202.102.40.43";
 	private int port = 27017;
 	private String dbName = "fwall";
 	private String user = "sikewall009";
