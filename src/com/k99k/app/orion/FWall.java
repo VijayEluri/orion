@@ -763,8 +763,9 @@ public class FWall implements Runnable {
 			System.out.println("pic_count:"+pic_count+ " findtime:"+findtime);
 			//int ii = 0;
 			//100个一次地读取
+			BasicDBObject q = new BasicDBObject("state",1);
 			for (int i = 0; i < findtime; i++) {
-				DBCursor ccur = picColl.find().sort(new BasicDBObject("_id",-1)).skip(i*100).limit(100);
+				DBCursor ccur = picColl.find(q).sort(new BasicDBObject("_id",-1)).skip(i*100).limit(100);
 				while (ccur.hasNext()) {
 					DBObject o = ccur.next();
 					String oid = ((ObjectId) (o.get("_id"))).toString();
@@ -1579,8 +1580,8 @@ public class FWall implements Runnable {
 	public static void main(String[] args) {
 		FWall f = new FWall("f:/works/workspace_keel/orion/WebContent/WEB-INF/fw_ini.json");
 		f.mongoCol.setIp("202.102.40.43");
+		//DBCollection coll_cate = f.mongoCol.getColl("wallCate");
 		/*
-		DBCollection coll_cate = f.mongoCol.getColl("wallCate");
 		
 		coll_cate.update(new BasicDBObject("cateName","Abstract"),new BasicDBObject("$set",new BasicDBObject("sortId",10)),false,false);
 		coll_cate.update(new BasicDBObject("cateName","Space"),new BasicDBObject("$set",new BasicDBObject("sortId",20)),false,false);
@@ -1631,7 +1632,35 @@ public class FWall implements Runnable {
 //		DBCollection coll_cate = f.mongoCol.getColl("wallCate");
 //		coll_cate.update(new BasicDBObject("catePre","japan"), new BasicDBObject("$set",new BasicDBObject("state",0)));
 		
-//		DBCollection coll_pic = f.mongoCol.getColl("wallPic");
+		DBCollection coll = f.mongoCol.getColl("wallPic");
+		
+		int t = 15;
+		String cate = "abs";
+		int begin = 203;
+		int end = 206;
+		
+		
+		Calendar c = Calendar.getInstance(timeZone);
+		c.set(Calendar.HOUR_OF_DAY, t);
+		BasicDBObject q = new BasicDBObject();
+		q.append("state", 1).append("cate", cate).append("picId",new BasicDBObject("$gte",begin).append("$lte", end));
+		BasicDBObject set = new BasicDBObject();
+		set.append("$set", new BasicDBObject("addTime",c.getTime()));
+		coll.update(q, set,false,true);
+		
+//		DBCursor cur = coll_cate.find();
+//		while (cur.hasNext()) {
+//			DBObject o = cur.next();
+//			String cate = (String)o.get("catePre");
+//			DBCursor cur2 =  coll_pic.find(new BasicDBObject("state",1).append("cate", cate),new BasicDBObject("picId",1)).sort(new BasicDBObject("picId",-1)).limit(1);
+//			if (cur2.hasNext()) {
+//				DBObject o2 = cur2.next();
+//				int max = Integer.parseInt(o2.get("picId")+"");
+//				System.out.println(cate+" max:"+max);
+//				coll_cate.update(new BasicDBObject("catePre",cate), new BasicDBObject("$set",new BasicDBObject("max",max)));
+//			}
+//		}
+		
 //		coll_pic.remove(new BasicDBObject("cate","japan"));
 		
 		

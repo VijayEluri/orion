@@ -510,23 +510,6 @@ public class AppFilter implements Filter {
 	static String fw_ini_html_us = "";
 	static String fw_ini_path_us = "";
 	
-	private static void reloadFwIni(){
-		String s = "",s_us="";
-		try {
-			s = IO.readTxt(fw_ini_path, "utf-8");
-			s_us = IO.readTxt(fw_ini_path_us, "utf-8");
-			
-		} catch (IOException e) {
-			e.printStackTrace();
-			s_us = "";
-			s = "";
-		}
-		if (s.length() > 10) {
-			fw_ini_html = s;
-			fw_ini_html_us = s_us;
-		}
-	}
-	
 //	/**
 //	 * 国内版下载地址的fw_ini.htm
 //	 */
@@ -555,6 +538,23 @@ public class AppFilter implements Filter {
 //		}
 //	}
 	
+	private static void reloadFwIni(){
+		String s = "",s_us="";
+		try {
+			s = IO.readTxt(fw_ini_path, "utf-8");
+			s_us = IO.readTxt(fw_ini_path_us, "utf-8");
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+			s_us = "";
+			s = "";
+		}
+		if (s.length() > 10) {
+			fw_ini_html = s;
+			fw_ini_html_us = s_us;
+		}
+	}
+
 	/**
 	 * @see Filter#init(FilterConfig)
 	 */
