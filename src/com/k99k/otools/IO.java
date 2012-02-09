@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.k99k.tools;
+package com.k99k.otools;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

@@ -1,4 +1,4 @@
-package com.k99k.tools;
+package com.k99k.otools;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;

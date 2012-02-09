@@ -1,4 +1,4 @@
-package com.k99k.tools.encrypter;
+package com.k99k.tools.encrypt;
 
 import javax.crypto.SecretKey;
 
