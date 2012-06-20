@@ -470,8 +470,8 @@ public class FWService implements Runnable {
 				SavePic sp = new SavePic(s,this.webPath);
 				piccoll.insert(sp);
 			}
-			//更新wallCate表的max字段
-			DBCursor cur = coll.find();
+			//更新wallCate表的max字段 //--每天更新最新图片时更新
+/*			DBCursor cur = coll.find();
 			while (cur.hasNext()) {
 				DBObject c = cur.next();
 				ObjectId oid = (ObjectId) c.get("_id");
@@ -482,7 +482,7 @@ public class FWService implements Runnable {
 					c.put("max", (Integer)cc.get("picId"));
 					coll.update(new BasicDBObject("_id",oid), c);
 				}
-			}
+			}*/
 		} catch (Exception e) {
 			log.error("updateDB error!",e);
 			//备份未成功的数据到outPath

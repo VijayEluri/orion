@@ -1424,6 +1424,7 @@ public class FWall implements Runnable {
 				//当更新数大于0时进行日更新操作
 				if (this.newPicsOneDay > 0) {
 					DBCollection coll_pic = mongoCol.getColl("wallPic");
+					DBCollection coll_cate = mongoCol.getColl("wallCate");
 					
 					//将state为2的新图片按类别排序，再按picId顺序排，避免更新乱掉
 					DBCursor cur = coll_pic.find(new BasicDBObject("state",2)).sort((new BasicDBObject("cate",1)).append("picId",1)).limit(this.newPicsOneDay);
@@ -1433,6 +1434,10 @@ public class FWall implements Runnable {
 						ObjectId oid = (ObjectId) dbo.get("_id");
 						//更新topId为1
 						coll_pic.update(new BasicDBObject("_id",oid), new BasicDBObject("$set",new BasicDBObject("state",1).append("addTime", new Date())));
+						//更新图片类别的max
+						String cate = (String)dbo.get("cate");
+						int picId = Integer.parseInt(dbo.get("picId").toString());
+						coll_cate.update(new BasicDBObject("catePre",cate), new BasicDBObject("$set",new BasicDBObject("max",picId)));
 						System.out.println("Update today pic:"+dbo.get("picName")+" id:"+oid);
 						i++;
 					}
