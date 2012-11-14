@@ -27,6 +27,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
+import com.mongodb.MongoException;
 import com.mongodb.util.JSON;
 
 /**
@@ -123,7 +124,7 @@ public class FWall implements Runnable {
 	/**
 	 * 重建Star索引的间隔时间，单位为秒
 	 */
-	private int starSleep = 5;
+	private int starSleep = 50;
 	
 	/**
 	 * 暂停线程中的 任何处理
@@ -135,12 +136,12 @@ public class FWall implements Runnable {
 	private Date nextReIndexStarTime = new Date();
 	
 	/**
-	 * 每天更新时间的分钟数
+	 * 每天更新时间的小时数
 	 */
 	private int dayUpdateHour = 12;
 	
 	/**
-	 * 每天更新时间的秒数
+	 * 每天更新时间的分钟数
 	 */
 	private int dayUpdateMin = 01;
 	
@@ -1065,7 +1066,7 @@ public class FWall implements Runnable {
 			System.out.println("wallconfig_us built.");
 			
 			this.checkReIndexTime();
-			//获取下次日更新时间
+			//获取日更新时间
 			this.nextUpdateTime = this.getNextDayUpdateTime();
 			
 			System.out.println("=======nextReIndexStarTime:"+this.nextReIndexStarTime+"=====");
@@ -1312,18 +1313,18 @@ public class FWall implements Runnable {
 							//目前只有登录请求任务，直接执行
 							this.login(task);
 						}
-						
 						//处理索引更新
 						this.checkReIndex();
 						//处理每天的更新图
-						updateByDay();
+						this.updateDaily();
+//						updateByDay();
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
 				}
 			
 				//sleep暂为1秒
-				Thread.sleep(1000);
+				Thread.sleep(5000);
 			}
 			if (mongoCol != null) {
 				mongoCol.close();
@@ -1359,6 +1360,15 @@ public class FWall implements Runnable {
 	 * @return 如果获取不到则返回当前时间的后一天
 	 */
 	private final Date getNextDayUpdateTime(){
+		Calendar c = Calendar.getInstance(timeZone);
+		if (c.get(Calendar.HOUR_OF_DAY) > this.dayUpdateHour || (c.get(Calendar.HOUR_OF_DAY) == this.dayUpdateHour && c.get(Calendar.MINUTE) >= this.dayUpdateMin)) {
+			//推到明天
+			c.add(Calendar.DATE, +1);
+		}
+		c.set(Calendar.HOUR_OF_DAY, this.dayUpdateHour);
+		c.set(Calendar.MINUTE, this.dayUpdateMin);
+		return c.getTime();
+		/*
 		DBCollection coll = mongoCol.getColl("wallDay");
 		DBCursor cur = coll.find(new BasicDBObject("id",1));
 		if (cur.hasNext()) {
@@ -1373,7 +1383,7 @@ public class FWall implements Runnable {
 			c.set(Calendar.MINUTE, this.dayUpdateMin);
 			c.add(Calendar.DATE, +1);
 			return c.getTime();
-		}
+		}*/
 	}
 	
 	/**
@@ -1395,7 +1405,58 @@ public class FWall implements Runnable {
 		this.newPicsOneDay = newPicsOneDay;
 	}
 
-
+	public void updateDaily(){
+		
+		try {
+			if (new Date().after(this.nextUpdateTime)) {
+				System.out.println("---- updateByDay running... newPicsOneDay:"+this.newPicsOneDay+" thisUpdateTime:"+nextUpdateTime);
+				Calendar c = Calendar.getInstance(timeZone);
+				c.setTime(this.nextUpdateTime);
+				c.add(Calendar.DATE, +1);
+				this.nextUpdateTime = c.getTime();
+				
+				boolean needInit = false;
+				int i = 0;
+				//当更新数大于0时进行日更新操作
+				if (this.newPicsOneDay > 0) {
+					DBCollection coll_pic = mongoCol.getColl("wallPic");
+					DBCollection coll_cate = mongoCol.getColl("wallCate");
+					
+					//将state为2的新图片按类别排序，再按picId顺序排，避免更新乱掉
+					DBCursor cur = coll_pic.find(new BasicDBObject("state",2)).sort((new BasicDBObject("cate",1)).append("picId",1)).limit(this.newPicsOneDay);
+					while (cur.hasNext()) {
+						DBObject dbo = (DBObject) cur.next();
+						ObjectId oid = (ObjectId) dbo.get("_id");
+						//更新topId为1
+						coll_pic.update(new BasicDBObject("_id",oid), new BasicDBObject("$set",new BasicDBObject("state",1).append("addTime", new Date())));
+						//更新图片类别的max
+						String cate = (String)dbo.get("cate");
+						int picId = Integer.parseInt(dbo.get("picId").toString());
+						coll_cate.update(new BasicDBObject("catePre",cate), new BasicDBObject("$set",new BasicDBObject("max",picId)));
+						System.out.println("Update today pic:"+dbo.get("picName")+" id:"+oid);
+						i++;
+					}
+					//有更新
+					if (i > 0) {
+						System.out.println("----Update by day pics:"+i);
+						//重新初始化
+						needInit = true;
+					}	
+				}
+				System.out.println("---- updateByDay over... updated today:"+i+" nextUpdateTime:"+nextUpdateTime);
+				//最后重新初始化
+				if (needInit) {
+					this.init();
+				}
+				
+				
+			}
+		} catch (NumberFormatException e) {
+			e.printStackTrace();
+		} catch (MongoException e) {
+			e.printStackTrace();
+		}
+	}
 
 	/**
 	 * 每天更新4张图片，将topId为2的标记为1，然后更新lastUpdateTime

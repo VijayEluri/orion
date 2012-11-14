@@ -77,6 +77,8 @@ public class FWService implements Runnable {
 	
 	private String mongoIP = "127.0.0.1";
 	private int mongoPort = 27017;
+	private String mongo2IP = "";
+	private int mongo2Port = 27017;
 	
 	/**
 	 * 当前任务id,用于任务处理后更新任务状态(wallTask表中的state,1为待处理,2为成功,3为失败)
@@ -91,13 +93,13 @@ public class FWService implements Runnable {
 	 * 获取数据库连接并验证
 	 * @return
 	 */
-	private final boolean getDB(){
+	private final boolean getDB(String ip,int port){
 		try {
 			if (this.db !=null && this.db.getName().equals("fwall")) {
 				return true;
 			}
 			if (mongo == null) {
-				mongo = new Mongo(this.mongoIP , this.mongoPort );
+				mongo = new Mongo(ip , port );
 			}
 			this.db = mongo.getDB("fwall");
 			boolean auth = db.authenticate("sikewall009", "6667441".toCharArray());
@@ -126,7 +128,7 @@ public class FWService implements Runnable {
 	 */
 	private final int checkTask(){
 		int task = TASK_NO;
-		if (!this.getDB()) {
+		if (!this.getDB(this.mongoIP,this.mongoPort)) {
 			return TASK_NO;
 		}
 		DBCollection coll = db.getCollection("wallTask");
@@ -146,7 +148,7 @@ public class FWService implements Runnable {
 	 * @param state
 	 */
 	private final void updateTaskState(ObjectId oid,int state){
-		if (!this.getDB()) {
+		if (!this.getDB(this.mongoIP,this.mongoPort)) {
 			log.error("updateTaskState - getDB error");
 			return;
 		}
@@ -161,7 +163,7 @@ public class FWService implements Runnable {
 	private HashMap<String,Integer> getInitIDMap(){
 		//db.wallPic.find({'cate':'space','state':1}).sort({'picId':-1}).limit(1)
 		HashMap<String, Integer> initIdMap = new HashMap<String, Integer>();
-		if (!this.getDB()) {
+		if (!this.getDB(this.mongoIP,this.mongoPort)) {
 			log.error("getInitIDMap - getDB error!");
 			return initIdMap;
 		}
@@ -213,6 +215,8 @@ public class FWService implements Runnable {
 			this.webPath = json.get("webPath").toString();
 			this.mongoIP = json.get("mongoIP").toString();
 			this.mongoPort = Integer.parseInt(json.get("mongoPort").toString());
+			this.mongo2IP = json.get("mongo2IP").toString();
+			this.mongo2Port = Integer.parseInt(json.get("mongo2Port").toString());
 			this.sleep = Integer.parseInt(json.get("sleep").toString());
 			this.preWidth = Integer.parseInt(json.get("preWidth").toString());
 			this.preHeight = Integer.parseInt(json.get("preHeight").toString());
@@ -456,13 +460,13 @@ public class FWService implements Runnable {
 		if (picList == null || picList.size() <= 0) {
 			return true;
 		}
-		if (!this.getDB()) {
-			log.error("updateDB - getDB error!");
-			//备份未成功的数据到outPath
-			saveToFile(picList,this.outPath);
-			return false;
-		}
 		try {
+			if (!this.getDB(this.mongoIP,this.mongoPort)) {
+				log.error("updateDB - getDB error!");
+				//备份未成功的数据到outPath
+				saveToFile(picList,this.outPath);
+				return false;
+			}
 			DBCollection coll = db.getCollection("wallCate");
 			DBCollection piccoll = db.getCollection("wallPic");
 			for (Iterator<String> iterator = picList.iterator(); iterator.hasNext();) {
@@ -470,6 +474,24 @@ public class FWService implements Runnable {
 				SavePic sp = new SavePic(s,this.webPath);
 				piccoll.insert(sp);
 			}
+			//更新远端数据库
+			mongo.close();
+			this.db = null;
+			if (!this.getDB(this.mongo2IP,this.mongo2Port)) {
+				log.error("updateDB - getDB error!");
+				//备份未成功的数据到outPath
+				saveToFile(picList,this.outPath);
+				return false;
+			}
+			coll = db.getCollection("wallCate");
+			piccoll = db.getCollection("wallPic");
+			for (Iterator<String> iterator = picList.iterator(); iterator.hasNext();) {
+				String s = iterator.next();
+				SavePic sp = new SavePic(s,this.webPath);
+				piccoll.insert(sp);
+			}
+			mongo.close();
+			this.db = null;
 			//更新wallCate表的max字段 //--每天更新最新图片时更新
 /*			DBCursor cur = coll.find();
 			while (cur.hasNext()) {
@@ -605,7 +627,7 @@ public class FWService implements Runnable {
 	
 	
 	void testBuild(){
-		if (!this.getDB()) {
+		if (!this.getDB(this.mongoIP,this.mongoPort)) {
 			System.out.println("...");
 		}
 		DBCollection coll = db.getCollection("wallTask");
