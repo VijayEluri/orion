@@ -246,6 +246,8 @@ public class FWService implements Runnable {
 		log.info("webPath:"+webPath);
 		log.info("mongoIP:"+mongoIP);
 		log.info("mongoPort:"+mongoPort);
+		log.info("mongo2IP:"+mongo2IP);
+		log.info("mongo2Port:"+mongo2Port);
 		log.info("sleep:"+sleep);
 		log.info("preWidth:"+preWidth);
 		log.info("preHeight:"+preHeight);
