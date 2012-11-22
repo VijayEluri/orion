@@ -479,6 +479,7 @@ public class FWService implements Runnable {
 			//更新远端数据库
 			mongo.close();
 			this.db = null;
+			mongo = null;
 			if (!this.getDB(this.mongo2IP,this.mongo2Port)) {
 				log.error("updateDB - getDB error!");
 				//备份未成功的数据到outPath
@@ -494,6 +495,7 @@ public class FWService implements Runnable {
 			}
 			mongo.close();
 			this.db = null;
+			mongo = null;
 			//更新wallCate表的max字段 //--每天更新最新图片时更新
 /*			DBCursor cur = coll.find();
 			while (cur.hasNext()) {
