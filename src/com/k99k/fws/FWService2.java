@@ -160,7 +160,6 @@ public class FWService2 implements Runnable {
 	 * @return
 	 */
 	private HashMap<String,Integer> getInitIDMap(){
-		//db.wallPic.find({'cate':'space','state':1}).sort({'picId':-1}).limit(1)
 		HashMap<String, Integer> initIdMap = new HashMap<String, Integer>();
 		if (!this.getDB(this.mongoIP,this.mongoPort)) {
 			log.error("getInitIDMap - getDB error!");
@@ -579,9 +578,9 @@ public class FWService2 implements Runnable {
 			switch (t) {
 			case TASK_SCAN:
 				//扫描preSource文件夹,单层目录，生成缩略图
-				if(!ij.makePreviews(prePath, preWidth, preHeight)){
-					re = -1;
-				}
+//				if(!ij.makePreviews(prePath, preWidth, preHeight)){
+//					re = -1;
+//				}
 				log.info("=========================\n");
 				break;
 			case TASK_BUILD:
@@ -590,7 +589,7 @@ public class FWService2 implements Runnable {
 				tmpPath = this.datePath+now;
 				String srcPathA = this.srcPath+now;
 				//发布图片
-				ArrayList<String> picList = ij.buildNewPics(readyPath, tmpPath, getInitIDMap(),srcPathA);
+				ArrayList<String> picList = ImgByGM.buildNewPics(readyPath, tmpPath, getInitIDMap(),srcPathA);
 				//处理临时文件
 				copyFullDir(new File(tmpPath),new  File(outPath));
 				//更新数据库
@@ -599,9 +598,9 @@ public class FWService2 implements Runnable {
 				}
 				if (picList != null && picList.size() > 0) {
 					//同步ftp
-					if(!this.synFtps(tmpPath,srcPathA)){
-						re = -3;
-					}
+//					if(!this.synFtps(tmpPath,srcPathA)){
+//						re = -3;
+//					}
 				}
 				log.info("=========================\n");
 				break;
