@@ -10,6 +10,8 @@ import com.mongodb.DB;
 import com.mongodb.DBCollection;
 import com.mongodb.DBPort;
 import com.mongodb.Mongo;
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoException;
 import com.mongodb.MongoOptions;
 import com.mongodb.ServerAddress;
@@ -26,7 +28,7 @@ public class MongoCol {
 	private String dbName = "fwall";
 	private String user = "sikewall009";
 	private String pwd = "6667441";
-	private static Mongo mongo;
+	private static MongoClient mongo;
 	private DB db;
 	private int maxWaitTime;
 	private int connectionsPerHost;
@@ -97,12 +99,16 @@ public class MongoCol {
 			if (mongo == null) {
 				//System.setProperty("MONGO.POOLSIZE", "100");
 				ServerAddress sadd = new ServerAddress(this.ip, this.port);
-				MongoOptions opt = new MongoOptions();
-				opt.autoConnectRetry = false;
-				opt.connectionsPerHost = this.connectionsPerHost;
-				opt.threadsAllowedToBlockForConnectionMultiplier = this.threadsAllowedToBlockForConnectionMultiplier;
-				opt.maxWaitTime = this.maxWaitTime;
-				mongo = new Mongo(sadd,opt);
+				MongoClientOptions opt = MongoClientOptions.builder().autoConnectRetry(false)
+						.connectionsPerHost(this.connectionsPerHost)
+						.threadsAllowedToBlockForConnectionMultiplier(threadsAllowedToBlockForConnectionMultiplier)
+						.maxWaitTime(maxWaitTime).build();
+						
+//				opt.autoConnectRetry = false;
+//				opt.connectionsPerHost = this.connectionsPerHost;
+//				opt.threadsAllowedToBlockForConnectionMultiplier = this.threadsAllowedToBlockForConnectionMultiplier;
+//				opt.maxWaitTime = this.maxWaitTime;
+				mongo = new MongoClient(sadd,opt);
 				this.db = mongo.getDB(this.dbName);
 				auth = db.authenticate(this.user, this.pwd.toCharArray());
 				System.out.println("===========new mongo built!!============");

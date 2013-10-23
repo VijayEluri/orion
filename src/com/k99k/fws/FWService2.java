@@ -31,6 +31,7 @@ import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.Mongo;
+import com.mongodb.MongoClient;
 import com.mongodb.MongoException;
 
 /**
@@ -84,7 +85,7 @@ public class FWService2 implements Runnable {
 	 */
 	private ObjectId currentTaskId;
 	
-	private static Mongo mongo;
+	private static MongoClient mongo;
 	
 	private DB db;
 	
@@ -98,7 +99,7 @@ public class FWService2 implements Runnable {
 				return true;
 			}
 			if (mongo == null) {
-				mongo = new Mongo(ip , port );
+				mongo = new MongoClient(ip , port );
 			}
 			this.db = mongo.getDB("fwall");
 			boolean auth = db.authenticate("sikewall009", "6667441".toCharArray());
@@ -475,6 +476,7 @@ public class FWService2 implements Runnable {
 				piccoll.insert(sp);
 			}
 			//更新远端数据库
+			/*
 			mongo.close();
 			this.db = null;
 			mongo = null;
@@ -491,22 +493,10 @@ public class FWService2 implements Runnable {
 				SavePic sp = new SavePic(s,this.webPath);
 				piccoll.insert(sp);
 			}
+			*/
 			mongo.close();
 			this.db = null;
 			mongo = null;
-			//更新wallCate表的max字段 //--每天更新最新图片时更新
-/*			DBCursor cur = coll.find();
-			while (cur.hasNext()) {
-				DBObject c = cur.next();
-				ObjectId oid = (ObjectId) c.get("_id");
-				String cate = (String) c.get("catePre");
-				DBCursor piccur = piccoll.find(new BasicDBObject("cate",cate)).sort(new BasicDBObject("picId",-1)).limit(1);
-				if (piccur.hasNext()) {
-					DBObject cc = piccur.next();
-					c.put("max", (Integer)cc.get("picId"));
-					coll.update(new BasicDBObject("_id",oid), c);
-				}
-			}*/
 		} catch (Exception e) {
 			log.error("updateDB error!",e);
 			//备份未成功的数据到outPath
