@@ -65,7 +65,7 @@ public class FWService2 implements Runnable {
 	private String outPath = "d:/fwservice/outPath";
 	private String datePath = "d:/fwservice/datePath";
 	private String tmpPath = "d:/fwservice/datePath";
-	private String config = "fws.json";
+	private String config = "/fws.json";
 	private String webPath = "/orion";
 	private int sleep = 5000;
 	private int preWidth = 300;
@@ -185,12 +185,12 @@ public class FWService2 implements Runnable {
 	private boolean init(){
 		//读取配置文件
 		try {
-			
-			JSONReader jsonReader = new JSONValidatingReader();
-			String path = (this.getClass().getResource("/").getPath());//.replaceAll("\\\\", "/");
-			if (path.startsWith("/")) {
-				path = path.substring(1);
-			}
+//			System.out.println(System.getProperty("user.dir"));
+//			String path = (this.getClass().getResource("/").getPath());//.replaceAll("\\\\", "/");
+//			if (path.startsWith("/")) {
+//				path = path.substring(1);
+//			}
+			String path = System.getProperty("user.dir");
 			log.info("Read json:"+path+config);
 			BufferedReader in = new BufferedReader(
 			            new InputStreamReader(new FileInputStream(path+config), "UTF8"));
@@ -199,6 +199,7 @@ public class FWService2 implements Runnable {
 			while ((str = in.readLine()) != null){
 				sb.append(str);
 			}
+			JSONReader jsonReader = new JSONValidatingReader();
 			Map<String,Object> json = (Map<String,Object>) jsonReader.read(sb.toString());
 			
 //			Properties ini = new Properties();
@@ -206,6 +207,8 @@ public class FWService2 implements Runnable {
 //			
 //			log.info("Read ini:"+path+config);
 //			ini.load(fls = new FileInputStream(path+config));
+			
+			
 			this.prePath = json.get("prePath").toString();
 			this.readyPath = json.get("readyPath").toString();
 			this.outPath = json.get("outPath").toString();
@@ -214,11 +217,13 @@ public class FWService2 implements Runnable {
 			this.webPath = json.get("webPath").toString();
 			this.mongoIP = json.get("mongoIP").toString();
 			this.mongoPort = Integer.parseInt(json.get("mongoPort").toString());
-			this.mongo2IP = json.get("mongo2IP").toString();
-			this.mongo2Port = Integer.parseInt(json.get("mongo2Port").toString());
+//			this.mongo2IP = json.get("mongo2IP").toString();
+//			this.mongo2Port = Integer.parseInt(json.get("mongo2Port").toString());
 			this.sleep = Integer.parseInt(json.get("sleep").toString());
 			this.preWidth = Integer.parseInt(json.get("preWidth").toString());
 			this.preHeight = Integer.parseInt(json.get("preHeight").toString());
+			
+			/*
 			ArrayList ftps =  (ArrayList) json.get("synftp");
 			this.ftps = new HashMap[ftps.size()];
 			int i = 0;
@@ -226,7 +231,7 @@ public class FWService2 implements Runnable {
 				this.ftps[i] = (Map) it.next();
 				i++;
 			}
-			
+			*/
 			
 			
 //			fls.close();
@@ -250,9 +255,9 @@ public class FWService2 implements Runnable {
 		log.info("sleep:"+sleep);
 		log.info("preWidth:"+preWidth);
 		log.info("preHeight:"+preHeight);
-		for (int i = 0; i < this.ftps.length; i++) {
-			log.info("synftp:"+this.ftps[i].get("ip")+":"+this.ftps[i].get("port")+" "+this.ftps[i].get("dir"));
-		}
+//		for (int i = 0; i < this.ftps.length; i++) {
+//			log.info("synftp:"+this.ftps[i].get("ip")+":"+this.ftps[i].get("port")+" "+this.ftps[i].get("dir"));
+//		}
 		log.info("---------------------------");
 		return true;
 	}
@@ -636,6 +641,7 @@ public class FWService2 implements Runnable {
 	 * @param args
 	 */
 	public static void main(String[] args) {
+		
 		FWService2 fws = new FWService2();
 		Thread t = new Thread(fws,"fws");
 		t.start();

@@ -1,4 +1,4 @@
 Manifest-Version: 1.0
 Sealed: true
-Main-Class: com.k99k.ij.resize.FWService
-Class-Path: ./ ./mongo-2.1.jar ./ij.jar ./log4j-1.2.13.jar ./stringtree-json-2.0.9.jar ./ftp4j-1.5.1.jar
+Main-Class: com.k99k.fws.FWService2
+Class-Path: lib/mongo-java-driver-2.11.3.jar lib/im4java-1.4.0.jar lib/log4j-1.2.13.jar lib/stringtree-json-2.0.9.jar lib/ftp4j-1.7.2.jar
