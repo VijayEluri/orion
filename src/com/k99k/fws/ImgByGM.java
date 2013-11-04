@@ -176,7 +176,8 @@ public class ImgByGM {
 	
 	static FilenameFilter jpgFilter = new FilenameFilter() {
         public boolean accept(File dir, String name) {
-            return name.substring(name.length()-4).toLowerCase().matches("[jpg|png|gif]") && (name.indexOf("[skip]")<0);
+        	String exName = name.substring(name.length()-3).toLowerCase();
+            return exName.matches("jpg|png|gif") && (name.indexOf("[skip]")<0);
         }
     };
     

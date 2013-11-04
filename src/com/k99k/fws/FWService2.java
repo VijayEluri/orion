@@ -67,6 +67,7 @@ public class FWService2 implements Runnable {
 	private String tmpPath = "d:/fwservice/datePath";
 	private String config = "/fws.json";
 	private String webPath = "/orion";
+	private String imgInitPath = "/usr/local/Cellar/graphicsmagick/1.3.18/bin";
 	private int sleep = 5000;
 	private int preWidth = 300;
 	private int preHeight = 200;
@@ -222,7 +223,7 @@ public class FWService2 implements Runnable {
 			this.sleep = Integer.parseInt(json.get("sleep").toString());
 			this.preWidth = Integer.parseInt(json.get("preWidth").toString());
 			this.preHeight = Integer.parseInt(json.get("preHeight").toString());
-			
+			this.imgInitPath = json.get("imgInitPath").toString();
 			/*
 			ArrayList ftps =  (ArrayList) json.get("synftp");
 			this.ftps = new HashMap[ftps.size()];
@@ -255,6 +256,9 @@ public class FWService2 implements Runnable {
 		log.info("sleep:"+sleep);
 		log.info("preWidth:"+preWidth);
 		log.info("preHeight:"+preHeight);
+		log.info("imgInitPath"+this.imgInitPath);
+		ImgByGM.init(this.imgInitPath);
+			
 //		for (int i = 0; i < this.ftps.length; i++) {
 //			log.info("synftp:"+this.ftps[i].get("ip")+":"+this.ftps[i].get("port")+" "+this.ftps[i].get("dir"));
 //		}

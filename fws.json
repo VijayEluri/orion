@@ -1,0 +1,18 @@
+{
+"prePath":"/Users/keel/Downloads/fwservice/prepath",
+"readyPath":"/Users/keel/Downloads/fwservice/ready",
+"outPath":"/Users/keel/Downloads/fwservice/orion",
+"srcPath":"/Users/keel/Downloads/fwservice/src",
+"datePath":"/Users/keel/Downloads/fwservice/date",
+"webPath":"/Users/keel/Downloads/fwservice/orion",
+"imgInitPath":"/usr/local/Cellar/graphicsmagick/1.3.18/bin",
+"sleep":"5000",
+"preWidth":"300",
+"preHeight":"200",
+"mongoIP":"127.0.0.1",
+"mongoPort":"27017",
+"synftp":[
+	{"ip":"202.102.40.43","port":"21","dir":"/webapps/ROOT/orion","src":"/webapps/ROOT/fws/src",
+	"user":"keel","pwd":"6667441"}
+]
+}
