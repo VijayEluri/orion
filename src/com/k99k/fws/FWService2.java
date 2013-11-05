@@ -182,6 +182,27 @@ public class FWService2 implements Runnable {
 		return initIdMap;
 	}
 	
+	/**
+	 * 复制整个文件夹到另一位置
+	 * @param from File 文件夹
+	 * @param to File 新的文件夹
+	 */
+	private static final void copyFullDir(File from,File to){
+		if (from.exists()) {
+			if (from.isDirectory()) {
+				to.mkdirs();
+				String[] children = from.list();
+				for (int i = 0; i < children.length; i++) {
+					copyFullDir(new File(from, children[i]),new File(to, children[i]));
+				}
+	
+			}else{
+				copy(from,to);
+			}
+		}
+	}
+
+
 	@SuppressWarnings("unchecked")
 	private boolean init(){
 		//读取配置文件
@@ -288,26 +309,6 @@ public class FWService2 implements Runnable {
 		return dir.delete();
 	}
 
-	/**
-	 * 复制整个文件夹到另一位置
-	 * @param from File 文件夹
-	 * @param to File 新的文件夹
-	 */
-	private static final void copyFullDir(File from,File to){
-		if (from.exists()) {
-			if (from.isDirectory()) {
-				to.mkdirs();
-				String[] children = from.list();
-				for (int i = 0; i < children.length; i++) {
-					copyFullDir(new File(from, children[i]),new File(to, children[i]));
-				}
-
-			}else{
-				copy(from,to);
-			}
-		}
-	}
-	
 	/**
 	 * 复制单个文件,如原文件存在则直接覆盖
 	 * @param fileFrom
@@ -477,7 +478,7 @@ public class FWService2 implements Runnable {
 				saveToFile(picList,this.outPath);
 				return false;
 			}
-			DBCollection coll = db.getCollection("wallCate");
+			//DBCollection coll = db.getCollection("wallCate");
 			DBCollection piccoll = db.getCollection("wallPic");
 			for (Iterator<String> iterator = picList.iterator(); iterator.hasNext();) {
 				String s = iterator.next();

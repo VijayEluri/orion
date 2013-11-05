@@ -4,7 +4,7 @@
 "outPath":"/Users/keel/Downloads/fwservice/orion",
 "srcPath":"/Users/keel/Downloads/fwservice/src",
 "datePath":"/Users/keel/Downloads/fwservice/date",
-"webPath":"/Users/keel/Downloads/fwservice/orion",
+"webPath":"/orion",
 "sleep":"5000",
 "preWidth":"300",
 "preHeight":"200",
